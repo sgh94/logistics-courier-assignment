@@ -71,6 +71,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   };
 
+  // 모바일 터치 이벤트 핸들러
+  const handleNavItemClick = (href: string) => {
+    router.push(href);
+    setIsSidebarOpen(false); // 네비게이션 후 사이드바 닫기
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -137,10 +143,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
             <nav className="mt-5 px-2 space-y-1">
               {navigationItems.map((item) => (
-                <Link
+                <div
                   key={item.name}
-                  href={item.href}
-                  className={`group flex items-center px-2 py-2 text-base font-medium rounded-md ${
+                  onClick={() => handleNavItemClick(item.href)}
+                  className={`group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer ${
                     pathname === item.href
                       ? 'bg-primary-100 text-primary-700'
                       : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
@@ -153,7 +159,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     aria-hidden="true"
                   />
                   {item.name}
-                </Link>
+                </div>
               ))}
             </nav>
           </div>

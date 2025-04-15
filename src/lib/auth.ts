@@ -74,7 +74,7 @@ export const verifyPhoneCode = async (phone: string, code: string) => {
   }
 };
 
-// 핸드폰 인증 및 회원가입
+// 핸드폰 인증 및 회원가입 - 수정된 버전
 export const signUpWithPhone = async (
   phone: string, 
   email: string | null, 
@@ -88,56 +88,56 @@ export const signUpWithPhone = async (
   console.log('Signing up user with phone:', phone, 'email:', email);
   
   try {
-    // 1. 사용자 인증 계정 생성
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      phone: phone,
+    // 현재 인증 세션 가져오기
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // 세션이 없으면 오류 반환
+    if (!session || !session.user) {
+      console.error('회원가입 실패: 유효한 인증 세션이 없습니다');
+      return { 
+        data: null, 
+        error: { message: '핸드폰 인증 세션이 만료되었거나 유효하지 않습니다. 다시 인증해주세요.' } 
+      };
+    }
+    
+    console.log('Using existing auth session:', session.user.id);
+    
+    // 사용자 메타데이터 업데이트
+    const { error: updateError } = await supabase.auth.updateUser({
       password: password,
       email: email || undefined,
-      options: {
-        data: {
-          name: userData.name,
-          role: userData.role
-        }
+      data: {
+        name: userData.name,
+        role: userData.role,
+        phone: phone
       }
     });
     
-    // 응답 로깅
-    console.log('Supabase signUp response:', { authData, authError });
-    
-    if (authError) return { data: null, error: authError };
-    
-    // 2. 사용자 프로필 정보 저장
-    if (authData.user) {
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert([
-          { 
-            id: authData.user.id,
-            phone: phone,
-            email: email || null,
-            name: userData.name,
-            role: userData.role
-          }
-        ]);
-      
-      // 프로필 생성 로깅
-      console.log('User profile creation result:', { profileError });
-      
-      if (profileError) {
-        console.error('Error creating user profile:', profileError);
-        
-        // 프로필 생성 실패 시 인증 계정 삭제 시도 (롤백)
-        try {
-          await supabase.auth.admin.deleteUser(authData.user.id);
-        } catch (deleteError) {
-          console.error('Error rolling back user creation:', deleteError);
-        }
-        
-        return { data: null, error: profileError };
-      }
+    if (updateError) {
+      console.error('사용자 정보 업데이트 실패:', updateError);
+      return { data: null, error: updateError };
     }
     
-    return { data: authData, error: null };
+    // 사용자 프로필 정보 저장
+    const { error: profileError } = await supabase
+      .from('users')
+      .insert([{ 
+        id: session.user.id,
+        phone: phone,
+        email: email || null,
+        name: userData.name,
+        role: userData.role
+      }]);
+    
+    // 프로필 생성 로깅
+    console.log('User profile creation result:', { profileError });
+    
+    if (profileError) {
+      console.error('사용자 프로필 생성 실패:', profileError);
+      return { data: null, error: profileError };
+    }
+    
+    return { data: { user: session.user }, error: null };
   } catch (e) {
     // 예외 로깅
     console.error('Exception during signup:', e);

@@ -24,11 +24,25 @@ export default function LoginPage() {
       if (error) {
         toast.error('로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.');
         console.error('Login error:', error);
+        setIsLoading(false);
         return;
       }
 
-      toast.success('로그인 성공!');
-      router.push('/dashboard');
+      // 프로필 정보를 확인하여 로그인 완료 처리
+      if (data && data.profile) {
+        toast.success(`안녕하세요, ${data.profile.name}님!`);
+        
+        // 역할에 따라 다른 페이지로 리다이렉트
+        if (data.profile.role === 'admin') {
+          router.push('/dashboard/statistics');
+        } else {
+          router.push('/dashboard/assignments');
+        }
+      } else {
+        // 사용자 정보는 있지만 프로필이 없는 경우
+        toast.error('사용자 프로필을 찾을 수 없습니다. 관리자에게 문의하세요.');
+        console.error('User has auth but no profile');
+      }
     } catch (error) {
       toast.error('로그인 중 오류가 발생했습니다.');
       console.error('Unexpected error during login:', error);

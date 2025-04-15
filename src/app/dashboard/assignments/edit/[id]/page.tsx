@@ -65,7 +65,7 @@ export default function EditAssignmentPage({ params }: Params) {
         setEndTime(assignment.end_time || '');
         setNotes(assignment.notes || '');
         setCourierId(assignment.courier_id);
-        
+
         // 기사 이름 설정 (from joining table)
         if (assignment.couriers) {
           setCourierName(assignment.couriers.name);
@@ -104,9 +104,9 @@ export default function EditAssignmentPage({ params }: Params) {
       await updateAssignment(assignmentId, {
         logistics_center_id: selectedCenter,
         date: dateString,
-        start_time: startTime || null,
-        end_time: endTime || null,
-        notes: notes || null
+        start_time: startTime || undefined,
+        end_time: endTime || undefined,
+        notes: notes || undefined
       });
 
       toast.success('배치가 성공적으로 수정되었습니다.');
@@ -154,7 +154,7 @@ export default function EditAssignmentPage({ params }: Params) {
                     {courierName || '알 수 없음'}
                   </div>
                 </div>
-                
+
                 <div>
                   <label htmlFor="logistics_center" className="block text-sm font-medium text-secondary-700">
                     물류센터 *

@@ -39,19 +39,19 @@ export default function NewAssignmentPage() {
     async function checkPermission() {
       try {
         const { user } = await getCurrentUser();
-        
+
         if (!user || user.role !== 'admin') {
           toast.error('관리자만 접근할 수 있습니다.');
           router.push('/dashboard');
           return;
         }
-        
+
         setAdminId(user.id);
-        
+
         // 물류센터 목록 가져오기
         const centers = await getLogisticsCenters();
         setLogisticsCenters(centers);
-        
+
         setIsLoading(false);
       } catch (error) {
         console.error('Error checking permissions:', error);
@@ -59,7 +59,7 @@ export default function NewAssignmentPage() {
         router.push('/dashboard');
       }
     }
-    
+
     checkPermission();
   }, [router]);
 
@@ -67,35 +67,35 @@ export default function NewAssignmentPage() {
   useEffect(() => {
     async function loadCouriers() {
       if (!selectedDate) return;
-      
+
       try {
         const dateString = selectedDate.toISOString().split('T')[0];
-        
+
         // 모든 기사 목록 가져오기 (투표 상태 포함)
         const couriersData = await getAllCouriersWithVoteStatus(dateString);
-        
+
         // 이미 배치된 기사 ID 목록 가져오기
         const assignedIds = await getAssignedCouriers(dateString);
         setAssignedCourierIds(assignedIds);
-        
+
         // 배치 상태 표시
         const couriersWithAssignmentStatus = couriersData.map(courier => ({
           ...courier,
           is_assigned: assignedIds.includes(courier.id)
         }));
-        
+
         setCouriers(couriersWithAssignmentStatus);
       } catch (error) {
         console.error('Error loading couriers:', error);
         toast.error('기사 목록을 불러오는데 실패했습니다.');
       }
     }
-    
+
     loadCouriers();
   }, [selectedDate]);
 
   const handleCourierToggle = (courierId: string) => {
-    setSelectedCouriers(prev => 
+    setSelectedCouriers(prev =>
       prev.includes(courierId)
         ? prev.filter(id => id !== courierId)
         : [...prev, courierId]
@@ -107,7 +107,7 @@ export default function NewAssignmentPage() {
     const unassignedCourierIds = couriers
       .filter(courier => !courier.is_assigned)
       .map(courier => courier.id);
-    
+
     setSelectedCouriers(unassignedCourierIds);
   };
 
@@ -116,7 +116,7 @@ export default function NewAssignmentPage() {
     const availableCourierIds = couriers
       .filter(courier => courier.vote_status === 'available' && !courier.is_assigned)
       .map(courier => courier.id);
-    
+
     setSelectedCouriers(availableCourierIds);
   };
 
@@ -126,42 +126,42 @@ export default function NewAssignmentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedCenter) {
       toast.error('물류센터를 선택해주세요.');
       return;
     }
-    
+
     if (!selectedDate) {
       toast.error('날짜를 선택해주세요.');
       return;
     }
-    
+
     if (selectedCouriers.length === 0) {
       toast.error('최소 한 명 이상의 기사를 선택해주세요.');
       return;
     }
-    
+
     setIsSaving(true);
-    
+
     try {
       const dateString = selectedDate.toISOString().split('T')[0];
       const centerData = logisticsCenters.find(c => c.id === selectedCenter);
-      
+
       // 각 기사별로 배치 데이터 생성
       const assignmentsData = selectedCouriers.map(courierId => ({
         courier_id: courierId,
         logistics_center_id: selectedCenter,
         date: dateString,
-        start_time: startTime || null,
-        end_time: endTime || null,
-        notes: notes || null,
+        start_time: startTime || undefined,
+        end_time: endTime || undefined,
+        notes: notes || undefined,
         created_by: adminId
       }));
-      
+
       // 배치 일괄 생성
       await createMultipleAssignments(assignmentsData);
-      
+
       // 각 기사에게 알림 전송
       for (const courierId of selectedCouriers) {
         await sendAssignmentNotification(
@@ -173,7 +173,7 @@ export default function NewAssignmentPage() {
           notes
         );
       }
-      
+
       toast.success('배치가 성공적으로 생성되었습니다.');
       router.push('/dashboard/assignments');
     } catch (error) {
@@ -379,7 +379,7 @@ export default function NewAssignmentPage() {
                       const isSelected = selectedCouriers.includes(courier.id);
                       let statusBg = 'bg-white border-secondary-200';
                       let statusBadge = null;
-                      
+
                       if (courier.vote_status === 'available') {
                         statusBadge = (
                           <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
@@ -409,14 +409,14 @@ export default function NewAssignmentPage() {
                           statusBg = 'bg-yellow-50 border-yellow-200';
                         }
                       }
-                      
+
                       // 선택된 경우 스타일 추가
                       if (isSelected) {
                         statusBg += ' ring-2 ring-primary-500 ring-opacity-50';
                       }
-                      
+
                       return (
-                        <div 
+                        <div
                           key={courier.id}
                           className={`p-4 rounded-lg border ${statusBg} cursor-pointer`}
                           onClick={() => handleCourierToggle(courier.id)}
@@ -431,11 +431,10 @@ export default function NewAssignmentPage() {
                               {statusBadge}
                               <button
                                 type="button"
-                                className={`w-6 h-6 rounded-full ${
-                                  isSelected
-                                    ? 'bg-primary-500 text-white'
-                                    : 'bg-white border border-secondary-300'
-                                } flex items-center justify-center focus:outline-none`}
+                                className={`w-6 h-6 rounded-full ${isSelected
+                                  ? 'bg-primary-500 text-white'
+                                  : 'bg-white border border-secondary-300'
+                                  } flex items-center justify-center focus:outline-none`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleCourierToggle(courier.id);
@@ -450,18 +449,18 @@ export default function NewAssignmentPage() {
                     })}
                 </div>
               )}
-              
+
               {selectedCouriers.some(id => {
                 const courier = couriers.find(c => c.id === id);
                 return courier && courier.vote_status === 'unavailable';
               }) && (
-                <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start">
-                  <FiAlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
-                  <p className="text-sm text-yellow-700">
-                    근무 불가능으로 투표한 기사가 포함되어 있습니다. 해당 기사들은 근무가 어려울 수 있으니 확인해주세요.
-                  </p>
-                </div>
-              )}
+                  <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start">
+                    <FiAlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
+                    <p className="text-sm text-yellow-700">
+                      근무 불가능으로 투표한 기사가 포함되어 있습니다. 해당 기사들은 근무가 어려울 수 있으니 확인해주세요.
+                    </p>
+                  </div>
+                )}
             </div>
           </div>
         </div>

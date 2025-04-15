@@ -8,9 +8,6 @@ import toast from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { RiKakaoTalkFill } from 'react-icons/ri';
 
-// 관리자 가입을 위한 초대 코드 (실제로는 환경변수나 데이터베이스에서 관리해야 함)
-const ADMIN_INVITE_CODE = 'ADMIN123';
-
 export default function SignupPage() {
   const [formData, setFormData] = useState({
     email: '',
@@ -18,24 +15,14 @@ export default function SignupPage() {
     confirmPassword: '',
     name: '',
     phone: '',
-    role: 'courier' as 'admin' | 'courier',
-    inviteCode: ''
+    role: 'courier' as 'admin' | 'courier'
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [showInviteField, setShowInviteField] = useState(false);
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // role이 admin으로 변경되면 초대 코드 필드 표시
-    if (name === 'role' && value === 'admin') {
-      setShowInviteField(true);
-    } else if (name === 'role' && value === 'courier') {
-      setShowInviteField(false);
-      setFormData(prev => ({ ...prev, inviteCode: '' }));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,13 +34,6 @@ export default function SignupPage() {
       setIsLoading(false);
       return;
     }
-    
-    // 관리자 역할을 선택했지만 초대 코드가 일치하지 않는 경우
-    if (formData.role === 'admin' && formData.inviteCode !== ADMIN_INVITE_CODE) {
-      toast.error('관리자 초대 코드가 올바르지 않습니다.');
-      setIsLoading(false);
-      return;
-    }
 
     try {
       const { data, error } = await signUpWithEmail(
@@ -61,7 +41,7 @@ export default function SignupPage() {
         formData.password, 
         {
           name: formData.name,
-          role: formData.role,
+          role: 'courier', // 항상 택배기사로만 가입 가능
           phone: formData.phone
         }
       );
@@ -72,7 +52,7 @@ export default function SignupPage() {
         return;
       }
 
-      toast.success('회원가입이 완료되었습니다. 이메일을 확인해주세요.');
+      toast.success('회원가입이 완료되었습니다. 이메일 인증을 위해 메일함을 확인해주세요.');
       router.push('/login');
     } catch (error) {
       toast.error('회원가입 중 오류가 발생했습니다.');
@@ -178,40 +158,21 @@ export default function SignupPage() {
           </div>
           
           <div>
-            <label htmlFor="role" className="block text-sm font-medium text-secondary-700">
+            <label className="block text-sm font-medium text-secondary-700">
               역할
             </label>
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="form-input w-full rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-            >
-              <option value="courier">택배기사</option>
-              <option value="admin">관리자</option>
-            </select>
-          </div>
-          
-          {showInviteField && (
-            <div>
-              <label htmlFor="inviteCode" className="block text-sm font-medium text-secondary-700">
-                관리자 초대 코드
-              </label>
-              <input
-                id="inviteCode"
-                name="inviteCode"
-                type="text"
-                value={formData.inviteCode}
-                onChange={handleChange}
-                className="form-input w-full rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                required
-              />
+            <div className="mt-1 p-3 bg-secondary-50 rounded-md border border-secondary-200">
+              <div className="flex items-center">
+                <span className="text-secondary-700 font-medium">택배기사</span>
+                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                  자동 설정
+                </span>
+              </div>
               <p className="mt-1 text-xs text-secondary-500">
-                관리자로 가입하려면 초대 코드가 필요합니다.
+                관리자 계정은 데이터베이스 관리자를 통해서만 생성 가능합니다.
               </p>
             </div>
-          )}
+          </div>
           
           <div>
             <button

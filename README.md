@@ -44,12 +44,16 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ## 시스템 특징
 
 ### 1. 투표 및 배치 시스템
-- 택배기사는 특정 날짜에 근무 가능 여부를 투표할 수 있습니다.
+- 택배기사는 특정 날짜에 근무 가능 여부를 투표할 수 있으며, 투표 시 다음 정보를 함께 제공할 수 있습니다:
+  - 근무 가능 여부 (가능/불가능)
+  - 특이사항 (오전만 가능, 특정 지역만 가능 등의 메모)
+  - 선호 물류센터 (물류센터 목록에서 선택)
 - 관리자는 다음과 같은 방식으로 배치를 관리할 수 있습니다:
   - 모든 택배기사를 배치할 수 있습니다 (투표 여부에 관계없이 가능)
   - 근무 가능으로 투표한 기사만 빠르게 선택할 수 있습니다.
   - 투표하지 않은 기사나 근무 불가로 투표한 기사도 필요시 배치 가능합니다.
   - 근무 불가로 투표한 기사를 선택시 경고 표시가 나타납니다.
+  - 관리자는 기사들의 특이사항과 선호 물류센터 정보를 확인하여 배치에 참고할 수 있습니다.
 
 ### 2. 홈 화면
 홈 화면에서는 실시간 데이터를 표시합니다:
@@ -95,6 +99,8 @@ CREATE TABLE votes (
   courier_id UUID REFERENCES users(id) NOT NULL,
   date DATE NOT NULL,
   is_available BOOLEAN NOT NULL DEFAULT true,
+  notes TEXT,
+  preferred_center_id UUID REFERENCES logistics_centers(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE,
   UNIQUE(courier_id, date)

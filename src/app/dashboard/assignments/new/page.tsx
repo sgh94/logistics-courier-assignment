@@ -204,7 +204,8 @@ export default function NewAssignmentPage() {
       <div className="mb-6 flex items-center">
         <Link
           href="/dashboard/assignments"
-          className="mr-4 p-2 rounded-md text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100"
+          className="mr-4 p-2 rounded-md text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+          aria-label="돌아가기"
         >
           <FiArrowLeft className="h-5 w-5" />
         </Link>
@@ -320,13 +321,13 @@ export default function NewAssignmentPage() {
 
         <div className="lg:col-span-2">
           <div className="card">
-            <div className="card-header flex justify-between items-center">
+            <div className="card-header flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <h3 className="text-lg font-semibold">택배기사 선택</h3>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={handleSelectAvailable}
-                  className="px-2 py-1 text-xs font-semibold rounded text-green-700 bg-green-100 hover:bg-green-200"
+                  className="px-3 py-2 text-xs font-semibold rounded text-green-700 bg-green-100 hover:bg-green-200 min-h-[44px] min-w-[44px] touch-manipulation"
                 >
                   <FiCheck className="inline-block mr-1" />
                   근무 가능만
@@ -334,7 +335,7 @@ export default function NewAssignmentPage() {
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="px-2 py-1 text-xs font-semibold rounded text-primary-700 bg-primary-100 hover:bg-primary-200"
+                  className="px-3 py-2 text-xs font-semibold rounded text-primary-700 bg-primary-100 hover:bg-primary-200 min-h-[44px] min-w-[44px] touch-manipulation"
                 >
                   <FiCheck className="inline-block mr-1" />
                   전체 선택
@@ -342,7 +343,7 @@ export default function NewAssignmentPage() {
                 <button
                   type="button"
                   onClick={handleUnselectAll}
-                  className="px-2 py-1 text-xs font-semibold rounded text-red-700 bg-red-100 hover:bg-red-200"
+                  className="px-3 py-2 text-xs font-semibold rounded text-red-700 bg-red-100 hover:bg-red-200 min-h-[44px] min-w-[44px] touch-manipulation"
                 >
                   <FiX className="inline-block mr-1" />
                   전체 해제
@@ -418,7 +419,7 @@ export default function NewAssignmentPage() {
                       return (
                         <div
                           key={courier.id}
-                          className={`p-4 rounded-lg border ${statusBg} cursor-pointer`}
+                          className={`p-4 rounded-lg border ${statusBg} cursor-pointer touch-manipulation min-h-[44px]`}
                           onClick={() => handleCourierToggle(courier.id)}
                         >
                           <div className="flex items-center justify-between">
@@ -434,11 +435,12 @@ export default function NewAssignmentPage() {
                                 className={`w-6 h-6 rounded-full ${isSelected
                                   ? 'bg-primary-500 text-white'
                                   : 'bg-white border border-secondary-300'
-                                  } flex items-center justify-center focus:outline-none`}
+                                  } flex items-center justify-center focus:outline-none min-h-[44px] min-w-[44px]`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleCourierToggle(courier.id);
                                 }}
+                                aria-label={isSelected ? "선택 해제" : "선택"}
                               >
                                 {isSelected && <FiCheck className="h-4 w-4" />}
                               </button>

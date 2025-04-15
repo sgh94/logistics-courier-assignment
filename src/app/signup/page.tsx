@@ -23,6 +23,7 @@ export default function SignupPage() {
   const [verificationRequested, setVerificationRequested] = useState(false);
   const [verificationConfirmed, setVerificationConfirmed] = useState(false);
   const [authSession, setAuthSession] = useState(null);
+  const [lastError, setLastError] = useState<any>(null);
   const router = useRouter();
 
   // 브라우저 정보 로깅 (디버깅용)
@@ -56,6 +57,8 @@ export default function SignupPage() {
       return;
     }
 
+    setLastError(null); // 오류 초기화
+    
     try {
       setIsLoading(true);
       // 전화번호 국제 형식으로 변환
@@ -67,7 +70,9 @@ export default function SignupPage() {
       console.log('Verification request result:', { success, error });
       
       if (!success) {
-        toast.error('인증번호 발송에 실패했습니다. 다시 시도해주세요.');
+        const errorMessage = error?.message || '알 수 없는 오류';
+        setLastError(error);
+        toast.error(`인증번호 발송에 실패했습니다: ${errorMessage}`);
         console.error('Verification request error details:', error);
         return;
       }
@@ -79,6 +84,7 @@ export default function SignupPage() {
       setFormData(prev => ({ ...prev, phone: formattedPhone }));
       
     } catch (error) {
+      setLastError(error);
       toast.error('인증번호 요청 중 오류가 발생했습니다.');
       console.error('Exception during verification request:', error);
     } finally {
@@ -92,6 +98,8 @@ export default function SignupPage() {
       return;
     }
 
+    setLastError(null); // 오류 초기화
+    
     try {
       setIsLoading(true);
       console.log('Verifying code:', formData.verificationCode, 'for phone:', formData.phone);
@@ -104,7 +112,9 @@ export default function SignupPage() {
       console.log('Verification result:', { success, data, error });
       
       if (!success) {
-        toast.error('인증번호가 일치하지 않습니다. 다시 확인해주세요.');
+        const errorMessage = error?.message || '알 수 없는 오류';
+        setLastError(error);
+        toast.error(`인증번호가 일치하지 않습니다: ${errorMessage}`);
         console.error('Verification error details:', error);
         return;
       }
@@ -127,6 +137,7 @@ export default function SignupPage() {
       }
       
     } catch (error) {
+      setLastError(error);
       toast.error('인증 중 오류가 발생했습니다.');
       console.error('Exception during code verification:', error);
     } finally {
@@ -150,6 +161,8 @@ export default function SignupPage() {
       return;
     }
 
+    setLastError(null); // 오류 초기화
+    
     try {
       console.log('Submitting signup with verified phone:', formData.phone);
       
@@ -167,13 +180,16 @@ export default function SignupPage() {
       console.log('Signup result:', { data, error });
       
       if (error) {
+        setLastError(error);
+        
         if (error.message && error.message.includes('already registered')) {
           toast.error('이미 가입된 전화번호입니다. 로그인 페이지로 이동합니다.');
           router.push('/login');
           return;
         }
         
-        toast.error('회원가입에 실패했습니다. 다시 시도해주세요.');
+        const errorMessage = error?.message || '알 수 없는 오류';
+        toast.error(`회원가입에 실패했습니다: ${errorMessage}`);
         console.error('Signup error details:', error);
         return;
       }
@@ -181,6 +197,7 @@ export default function SignupPage() {
       toast.success('회원가입이 완료되었습니다.');
       router.push('/login');
     } catch (error) {
+      setLastError(error);
       toast.error('회원가입 중 오류가 발생했습니다.');
       console.error('Exception during signup submission:', error);
     } finally {
@@ -195,10 +212,12 @@ export default function SignupPage() {
       const { error } = await signInWithSocial(provider);
       
       if (error) {
+        setLastError(error);
         toast.error(`${provider === 'google' ? '구글' : '카카오'} 로그인에 실패했습니다.`);
         console.error('Social login error:', error);
       }
     } catch (error) {
+      setLastError(error);
       toast.error('소셜 로그인 중 오류가 발생했습니다.');
       console.error('Exception during social login:', error);
     }
@@ -402,9 +421,29 @@ export default function SignupPage() {
           </p>
         </div>
         
-        {/* 디버깅용 숨겨진 로그 뷰어 (개발 환경에서만 표시) */}
+        {/* 디버깅용 오류 정보 (개발 환경에서만 표시) */}
+        {process.env.NODE_ENV === 'development' && lastError && (
+          <div className="mt-8 p-3 bg-red-50 border border-red-200 rounded text-xs overflow-auto max-h-60">
+            <div className="font-bold mb-1 text-red-700">오류 상세 정보:</div>
+            <pre className="whitespace-pre-wrap">
+              {JSON.stringify(lastError, null, 2)}
+            </pre>
+            {lastError.message && (
+              <div className="mt-2 text-red-700">
+                <strong>메시지:</strong> {lastError.message}
+              </div>
+            )}
+            {lastError.details && (
+              <div className="mt-1 text-red-700">
+                <strong>상세:</strong> {lastError.details}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* 디버깅용 상태 정보 (개발 환경에서만 표시) */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="mt-8 p-3 bg-gray-100 rounded text-xs overflow-auto max-h-40 opacity-50 hover:opacity-100">
+          <div className="mt-4 p-3 bg-gray-100 rounded text-xs overflow-auto max-h-40 opacity-50 hover:opacity-100">
             <div className="font-bold mb-1">디버깅 정보</div>
             <div>전화번호: {formData.phone}</div>
             <div>인증 요청됨: {verificationRequested ? 'Yes' : 'No'}</div>

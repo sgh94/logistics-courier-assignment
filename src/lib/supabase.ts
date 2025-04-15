@@ -27,6 +27,17 @@ export type LogisticsCenter = {
   created_by: string;
 };
 
+export type Vote = {
+  id: string;
+  courier_id: string;
+  date: string;
+  is_available: boolean;
+  notes?: string;
+  preferred_center_id?: string;
+  created_at: string;
+  updated_at?: string;
+};
+
 export type Assignment = {
   id: string;
   courier_id: string;
@@ -37,13 +48,4 @@ export type Assignment = {
   created_at: string;
   created_by: string;
   notes?: string;
-};
-
-export type Vote = {
-  id: string;
-  courier_id: string;
-  date: string;
-  is_available: boolean;
-  created_at: string;
-  updated_at?: string;
 };

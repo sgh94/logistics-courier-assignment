@@ -22,7 +22,14 @@ export default function LoginPage() {
       const { data, error } = await signInWithEmail(email, password);
       
       if (error) {
-        toast.error('로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.');
+        // Supabase 에러 코드에 따른 메시지 처리
+        if (error.message.includes('Email not confirmed')) {
+          toast.error('이메일 인증이 필요합니다. 메일함을 확인해주세요.');
+        } else if (error.message.includes('Invalid login credentials')) {
+          toast.error('이메일 또는 비밀번호가 올바르지 않습니다.');
+        } else {
+          toast.error('로그인에 실패했습니다. 다시 시도해주세요.');
+        }
         console.error('Login error:', error);
         setIsLoading(false);
         return;

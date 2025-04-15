@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithPhone, requestPhoneVerification, verifyPhoneCode, signInWithSocial } from '@/lib/auth';
+import { formatPhoneNumber, isValidPhoneNumber } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { RiKakaoTalkFill } from 'react-icons/ri';
@@ -17,20 +18,21 @@ export default function LoginPage() {
   const [verificationRequested, setVerificationRequested] = useState(false);
   const router = useRouter();
 
-  const formatPhoneNumber = (phone: string) => {
-    // 전화번호 형식을 Supabase가 요구하는 국제 표준 형식으로 변환 (+8210XXXXXXXX)
-    if (phone.startsWith('0')) {
-      return '+82' + phone.substring(1).replace(/-/g, '');
-    }
-    if (phone.startsWith('+')) {
-      return phone.replace(/-/g, '');
-    }
-    return '+82' + phone.replace(/-/g, '');
-  };
-
   const handlePhoneLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    if (!phone) {
+      toast.error('핸드폰 번호를 입력해주세요.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!isValidPhoneNumber(phone)) {
+      toast.error('유효하지 않은 핸드폰 번호 형식입니다.');
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const formattedPhone = formatPhoneNumber(phone);
@@ -38,9 +40,9 @@ export default function LoginPage() {
       
       if (error) {
         // 에러 코드에 따른 메시지 처리
-        if (error.message.includes('Invalid phone')) {
+        if (error.message && error.message.includes('Invalid phone')) {
           toast.error('등록되지 않은 핸드폰 번호입니다.');
-        } else if (error.message.includes('Invalid login credentials')) {
+        } else if (error.message && error.message.includes('Invalid login credentials')) {
           toast.error('핸드폰 번호 또는 비밀번호가 올바르지 않습니다.');
         } else {
           toast.error('로그인에 실패했습니다. 다시 시도해주세요.');
@@ -76,6 +78,11 @@ export default function LoginPage() {
   const handleRequestOtp = async () => {
     if (!phone) {
       toast.error('핸드폰 번호를 입력해주세요.');
+      return;
+    }
+
+    if (!isValidPhoneNumber(phone)) {
+      toast.error('유효하지 않은 핸드폰 번호 형식입니다.');
       return;
     }
 

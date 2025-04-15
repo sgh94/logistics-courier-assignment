@@ -33,9 +33,16 @@ export type Vote = {
   date: string;
   is_available: boolean;
   notes?: string;
-  preferred_center_id?: string;
   created_at: string;
   updated_at?: string;
+  preferred_centers?: LogisticsCenter[]; // 여러 물류센터 포함
+};
+
+export type VotePreferredCenter = {
+  id: string;
+  vote_id: string;
+  center_id: string;
+  created_at: string;
 };
 
 export type Assignment = {

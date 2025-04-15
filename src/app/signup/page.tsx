@@ -3,11 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signUpWithPhone, requestPhoneVerification, verifyPhoneCode, signInWithSocial } from '@/lib/auth';
+import { signUpWithPhone, requestPhoneVerification, verifyPhoneCode } from '@/lib/auth';
 import { formatPhoneNumber, isValidPhoneNumber } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import { FcGoogle } from 'react-icons/fc';
-import { RiKakaoTalkFill } from 'react-icons/ri';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -205,24 +203,6 @@ export default function SignupPage() {
     }
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
-    try {
-      console.log('Initiating social login with provider:', provider);
-      
-      const { error } = await signInWithSocial(provider);
-      
-      if (error) {
-        setLastError(error);
-        toast.error(`${provider === 'google' ? '구글' : '카카오'} 로그인에 실패했습니다.`);
-        console.error('Social login error:', error);
-      }
-    } catch (error) {
-      setLastError(error);
-      toast.error('소셜 로그인 중 오류가 발생했습니다.');
-      console.error('Exception during social login:', error);
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-secondary-50">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
@@ -382,35 +362,6 @@ export default function SignupPage() {
             </button>
           </div>
         </form>
-        
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-secondary-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-secondary-500">또는</span>
-            </div>
-          </div>
-          
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button
-              onClick={() => handleSocialLogin('google')}
-              className="flex justify-center items-center py-2 px-4 bg-white hover:bg-secondary-50 border border-secondary-300 rounded-md shadow-sm"
-            >
-              <FcGoogle className="text-xl mr-2" />
-              <span>구글</span>
-            </button>
-            
-            <button
-              onClick={() => handleSocialLogin('kakao')}
-              className="flex justify-center items-center py-2 px-4 bg-[#FEE500] hover:bg-[#FADA0A] border border-[#FEE500] rounded-md shadow-sm"
-            >
-              <RiKakaoTalkFill className="text-xl mr-2 text-[#3A1D1D]" />
-              <span className="text-[#3A1D1D]">카카오</span>
-            </button>
-          </div>
-        </div>
         
         <div className="mt-6 text-center">
           <p className="text-sm text-secondary-600">

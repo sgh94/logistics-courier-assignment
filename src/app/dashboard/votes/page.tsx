@@ -317,17 +317,17 @@ export default function VotesPage() {
                 />
               </div>
               
-              <div className="flex space-x-2">
+              <div className="relative flex flex-wrap space-x-2 z-0">
                 <button 
                   onClick={() => handleVote(true)}
-                  className="flex-1 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+                  className="flex-1 flex-grow flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-md transition duration-200 min-h-[48px] min-w-[120px] mb-2 touch-manipulation"
                 >
                   <FiCheckCircle className="h-5 w-5 mr-2" />
                   근무 가능
                 </button>
                 <button 
                   onClick={() => handleVote(false)}
-                  className="flex-1 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+                  className="flex-1 flex-grow flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-md transition duration-200 min-h-[48px] min-w-[120px] mb-2 touch-manipulation"
                 >
                   <FiXCircle className="h-5 w-5 mr-2" />
                   근무 불가능

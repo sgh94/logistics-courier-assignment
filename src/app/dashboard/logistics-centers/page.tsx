@@ -55,6 +55,16 @@ export default function LogisticsCentersPage() {
     }
   };
 
+  // 모바일 터치 핸들러 - 해당 경로로 이동합니다
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
+
+  // 지도 보기 핸들러
+  const handleMapView = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -71,13 +81,14 @@ export default function LogisticsCentersPage() {
     <div className="py-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold text-secondary-800">물류센터 관리</h2>
-        <Link
-          href="/dashboard/logistics-centers/new"
-          className="btn-primary flex items-center"
+        <button
+          onClick={() => handleNavigation('/dashboard/logistics-centers/new')}
+          className="btn-primary flex items-center p-3 touch-manipulation"
+          aria-label="새 물류센터 추가"
         >
           <FiPlus className="h-5 w-5 mr-2" />
           새 물류센터
-        </Link>
+        </button>
       </div>
 
       {centers.length === 0 ? (
@@ -85,10 +96,14 @@ export default function LogisticsCentersPage() {
           <FiMapPin className="h-12 w-12 mx-auto text-secondary-400 mb-4" />
           <h3 className="text-xl font-medium text-secondary-600 mb-2">등록된 물류센터가 없습니다</h3>
           <p className="text-secondary-500 mb-6">새로운 물류센터를 추가해보세요.</p>
-          <Link href="/dashboard/logistics-centers/new" className="btn-primary inline-flex items-center">
+          <button 
+            onClick={() => handleNavigation('/dashboard/logistics-centers/new')} 
+            className="btn-primary inline-flex items-center p-3 touch-manipulation"
+            aria-label="물류센터 추가하기"
+          >
             <FiPlus className="h-5 w-5 mr-2" />
             물류센터 추가하기
-          </Link>
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -97,15 +112,17 @@ export default function LogisticsCentersPage() {
               <div className="card-header flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-secondary-800">{center.name}</h3>
                 <div className="flex space-x-2">
-                  <Link
-                    href={`/dashboard/logistics-centers/edit/${center.id}`}
-                    className="p-1 rounded-md text-secondary-500 hover:text-primary-600 hover:bg-secondary-100"
+                  <button
+                    onClick={() => handleNavigation(`/dashboard/logistics-centers/edit/${center.id}`)}
+                    className="p-3 rounded-md text-secondary-500 hover:text-primary-600 hover:bg-secondary-100 touch-manipulation"
+                    aria-label="물류센터 정보 수정"
                   >
                     <FiEdit2 className="h-5 w-5" />
-                  </Link>
+                  </button>
                   <button
                     onClick={() => handleDelete(center.id)}
-                    className="p-1 rounded-md text-secondary-500 hover:text-red-600 hover:bg-secondary-100"
+                    className="p-3 rounded-md text-secondary-500 hover:text-red-600 hover:bg-secondary-100 touch-manipulation"
+                    aria-label="물류센터 삭제"
                   >
                     <FiTrash2 className="h-5 w-5" />
                   </button>
@@ -133,15 +150,14 @@ export default function LogisticsCentersPage() {
                 </div>
                 {center.map_url && (
                   <div className="mt-4">
-                    <a
-                      href={center.map_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center"
+                    <button
+                      onClick={() => handleMapView(center.map_url || '')}
+                      className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center py-2 px-3 rounded-md hover:bg-primary-50 touch-manipulation"
+                      aria-label="지도에서 위치 보기"
                     >
                       <FiMapPin className="h-4 w-4 mr-1" />
                       지도에서 보기
-                    </a>
+                    </button>
                   </div>
                 )}
               </div>

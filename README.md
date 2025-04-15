@@ -8,7 +8,7 @@
 - 물류센터 정보 관리
 - 근무 가능 여부 투표
 - 기사 배치 관리
-- 배치 알림 시스템
+- 배치 알림 시스템 (이메일, SMS, 카카오톡)
 - 통계 및 보고서
 
 ## 기술 스택
@@ -34,3 +34,108 @@ npm run dev
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
+
+## Supabase 데이터베이스 스키마
+
+### users 테이블
+```sql
+CREATE TABLE users (
+  id UUID REFERENCES auth.users NOT NULL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('admin', 'courier')),
+  phone TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(id)
+);
+```
+
+### logistics_centers 테이블
+```sql
+CREATE TABLE logistics_centers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  address TEXT NOT NULL,
+  map_url TEXT,
+  manager_name TEXT,
+  manager_contact TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID REFERENCES users(id)
+);
+```
+
+### votes 테이블
+```sql
+CREATE TABLE votes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  courier_id UUID REFERENCES users(id) NOT NULL,
+  date DATE NOT NULL,
+  is_available BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE,
+  UNIQUE(courier_id, date)
+);
+```
+
+### assignments 테이블
+```sql
+CREATE TABLE assignments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  courier_id UUID REFERENCES users(id) NOT NULL,
+  logistics_center_id UUID REFERENCES logistics_centers(id) NOT NULL,
+  date DATE NOT NULL,
+  start_time TIME,
+  end_time TIME,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID REFERENCES users(id)
+);
+```
+
+### notification_settings 테이블
+```sql
+CREATE TABLE notification_settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) NOT NULL UNIQUE,
+  email_enabled BOOLEAN NOT NULL DEFAULT true,
+  sms_enabled BOOLEAN NOT NULL DEFAULT false,
+  kakao_enabled BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE
+);
+```
+
+### notifications 테이블
+```sql
+CREATE TABLE notifications (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('assignment', 'cancellation', 'update', 'vote', 'general')),
+  read BOOLEAN NOT NULL DEFAULT false,
+  email_sent BOOLEAN NOT NULL DEFAULT false,
+  sms_sent BOOLEAN NOT NULL DEFAULT false,
+  kakao_sent BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## 권한 설정
+Supabase에서 다음과 같은 RLS(Row Level Security) 정책을 설정해야 합니다:
+
+1. users: 모든 사용자가 자신의 정보를 읽을 수 있으며, 관리자만 모든 사용자 정보에 접근 가능
+2. logistics_centers: 모든 사용자가 읽을 수 있으며, 관리자만 생성/수정/삭제 가능
+3. votes: 사용자는 자신의 투표만 생성/수정/조회 가능하며, 관리자는 모든 투표 조회 가능
+4. assignments: 사용자는 자신의 배치만 조회 가능하며, 관리자는 모든 배치 생성/수정/삭제/조회 가능
+5. notification_settings: 사용자는 자신의 설정만 조회/수정 가능하며, 관리자는 모든 설정 조회/수정 가능
+6. notifications: 사용자는 자신의 알림만 조회 가능
+
+## 배포 방법
+Vercel을 통해 쉽게 배포할 수 있습니다:
+
+1. [Vercel](https://vercel.com) 계정 생성
+2. 이 레포지토리와 연결
+3. 환경 변수 설정 (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)
+4. 배포 버튼 클릭

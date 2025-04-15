@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUser, signOut } from '@/lib/auth';
 import { User } from '@/lib/supabase';
+import toast from 'react-hot-toast';
 import { 
   FiMenu, 
   FiX, 
@@ -30,12 +31,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     async function loadUser() {
-      const { user } = await getCurrentUser();
-      setUser(user);
-      setIsLoading(false);
-      
-      if (!user) {
+      try {
+        const { user } = await getCurrentUser();
+        
+        if (!user) {
+          toast.error('로그인이 필요합니다.');
+          router.push('/login');
+          return;
+        }
+        
+        setUser(user);
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+        toast.error('사용자 정보를 불러오는데 실패했습니다.');
         router.push('/login');
+      } finally {
+        setIsLoading(false);
       }
     }
     
@@ -43,8 +54,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [router]);
 
   const handleSignOut = async () => {
-    await signOut();
-    router.push('/login');
+    try {
+      const { error } = await signOut();
+      
+      if (error) {
+        console.error('Error signing out:', error);
+        toast.error('로그아웃 중 오류가 발생했습니다.');
+        return;
+      }
+      
+      toast.success('로그아웃 되었습니다.');
+      router.push('/login');
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error);
+      toast.error('로그아웃 중 오류가 발생했습니다.');
+    }
   };
 
   if (isLoading) {

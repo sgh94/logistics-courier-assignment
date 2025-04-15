@@ -47,7 +47,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 - 택배기사는 특정 날짜에 근무 가능 여부를 투표할 수 있으며, 투표 시 다음 정보를 함께 제공할 수 있습니다:
   - 근무 가능 여부 (가능/불가능)
   - 특이사항 (오전만 가능, 특정 지역만 가능 등의 메모)
-  - 선호 물류센터 (물류센터 목록에서 선택)
+  - 선호 물류센터 (물류센터 목록에서 다중 선택 가능)
 - 관리자는 다음과 같은 방식으로 배치를 관리할 수 있습니다:
   - 모든 택배기사를 배치할 수 있습니다 (투표 여부에 관계없이 가능)
   - 근무 가능으로 투표한 기사만 빠르게 선택할 수 있습니다.
@@ -100,10 +100,20 @@ CREATE TABLE votes (
   date DATE NOT NULL,
   is_available BOOLEAN NOT NULL DEFAULT true,
   notes TEXT,
-  preferred_center_id UUID REFERENCES logistics_centers(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE,
   UNIQUE(courier_id, date)
+);
+```
+
+### vote_preferred_centers 테이블
+```sql
+CREATE TABLE vote_preferred_centers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  vote_id UUID REFERENCES votes(id) ON DELETE CASCADE NOT NULL,
+  center_id UUID REFERENCES logistics_centers(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(vote_id, center_id)
 );
 ```
 
@@ -157,9 +167,10 @@ Supabase에서 다음과 같은 RLS(Row Level Security) 정책을 설정해야 �
 1. users: 모든 사용자가 자신의 정보를 읽을 수 있으며, 관리자만 모든 사용자 정보에 접근 가능
 2. logistics_centers: 모든 사용자가 읽을 수 있으며, 관리자만 생성/수정/삭제 가능
 3. votes: 사용자는 자신의 투표만 생성/수정/조회 가능하며, 관리자는 모든 투표 조회 가능
-4. assignments: 사용자는 자신의 배치만 조회 가능하며, 관리자는 모든 배치 생성/수정/삭제/조회 가능
-5. notification_settings: 사용자는 자신의 설정만 조회/수정 가능하며, 관리자는 모든 설정 조회/수정 가능
-6. notifications: 사용자는 자신의 알림만 조회 가능
+4. vote_preferred_centers: 사용자는 자신의 투표 관련 선호 물류센터만 생성/조회 가능, 관리자는 모든 데이터 조회/수정 가능
+5. assignments: 사용자는 자신의 배치만 조회 가능하며, 관리자는 모든 배치 생성/수정/삭제/조회 가능
+6. notification_settings: 사용자는 자신의 설정만 조회/수정 가능하며, 관리자는 모든 설정 조회/수정 가능
+7. notifications: 사용자는 자신의 알림만 조회 가능
 
 ## 문제 해결
 

@@ -50,6 +50,48 @@ export async function getAvailableCouriers(date: string) {
   return data.map(vote => vote.users as User);
 }
 
+// 특정 날짜의 모든 택배기사 정보 (투표 상태 포함)
+export async function getAllCouriersWithVoteStatus(date: string) {
+  // 1. 모든 택배기사 가져오기
+  const { data: couriers, error: courierError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('role', 'courier')
+    .order('name');
+  
+  if (courierError) {
+    console.error('Error fetching all couriers:', courierError);
+    throw courierError;
+  }
+  
+  // 2. 해당 날짜의 모든 투표 가져오기
+  const { data: votes, error: voteError } = await supabase
+    .from('votes')
+    .select('*')
+    .eq('date', date);
+  
+  if (voteError) {
+    console.error(`Error fetching votes for date ${date}:`, voteError);
+    throw voteError;
+  }
+  
+  // 3. 투표 정보 매핑
+  const voteMap = new Map();
+  votes.forEach(vote => {
+    voteMap.set(vote.courier_id, vote.is_available);
+  });
+  
+  // 4. 각 기사에 투표 상태 추가
+  const couriersWithVoteStatus = couriers.map(courier => ({
+    ...courier,
+    vote_status: voteMap.has(courier.id) 
+      ? (voteMap.get(courier.id) ? 'available' : 'unavailable') 
+      : 'not_voted'
+  }));
+  
+  return couriersWithVoteStatus;
+}
+
 // 이미 배치된 택배기사 가져오기
 export async function getAssignedCouriers(date: string) {
   const { data, error } = await supabase

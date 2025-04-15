@@ -6,7 +6,32 @@ export const signInWithEmail = async (email: string, password: string) => {
     password,
   });
   
-  return { data, error };
+  if (error) {
+    console.error('Login error:', error);
+    return { data: null, error };
+  }
+
+  // 사용자 프로필 정보 가져오기
+  const { data: userData, error: profileError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', data.user.id)
+    .single();
+  
+  if (profileError) {
+    console.error('Error fetching user profile:', profileError);
+    // 로그인은 성공했으나 프로필 로드 실패
+    return { data, error: profileError };
+  }
+  
+  // 수정된 데이터 반환 (인증 + 프로필 정보)
+  return { 
+    data: {
+      ...data,
+      profile: userData
+    }, 
+    error: null 
+  };
 };
 
 export const signUpWithEmail = async (email: string, password: string, userData: { name: string, role: 'admin' | 'courier', phone?: string }) => {
@@ -32,7 +57,18 @@ export const signUpWithEmail = async (email: string, password: string, userData:
         }
       ]);
     
-    if (profileError) return { data: null, error: profileError };
+    if (profileError) {
+      console.error('Error creating user profile:', profileError);
+      
+      // 프로필 생성 실패 시 인증 계정 삭제 시도 (롤백)
+      try {
+        await supabase.auth.admin.deleteUser(authData.user.id);
+      } catch (deleteError) {
+        console.error('Error rolling back user creation:', deleteError);
+      }
+      
+      return { data: null, error: profileError };
+    }
   }
   
   return { data: authData, error: null };

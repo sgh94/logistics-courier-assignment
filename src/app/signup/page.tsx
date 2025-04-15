@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signUpWithPhone, requestPhoneVerification, verifyPhoneCode, signInWithSocial } from '@/lib/auth';
+import { formatPhoneNumber, isValidPhoneNumber } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { RiKakaoTalkFill } from 'react-icons/ri';
@@ -29,28 +30,20 @@ export default function SignupPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const formatPhoneNumber = (phone: string) => {
-    // 전화번호 형식을 Supabase가 요구하는 국제 표준 형식으로 변환 (+8210XXXXXXXX)
-    // 국내 전화번호 포맷인 경우
-    if (phone.startsWith('0')) {
-      return '+82' + phone.substring(1).replace(/-/g, '');
-    }
-    // 이미 국제 표준 형식인 경우
-    if (phone.startsWith('+')) {
-      return phone.replace(/-/g, '');
-    }
-    // 기타 경우는 국내 번호로 가정
-    return '+82' + phone.replace(/-/g, '');
-  };
-
   const handleRequestVerification = async () => {
     if (!formData.phone) {
       toast.error('핸드폰 번호를 입력해주세요.');
       return;
     }
 
+    if (!isValidPhoneNumber(formData.phone)) {
+      toast.error('유효하지 않은 핸드폰 번호 형식입니다.');
+      return;
+    }
+
     try {
       setIsLoading(true);
+      // 전화번호 국제 형식으로 변환
       const formattedPhone = formatPhoneNumber(formData.phone);
       
       const { success, error } = await requestPhoneVerification(formattedPhone);
@@ -146,7 +139,7 @@ export default function SignupPage() {
       );
       
       if (error) {
-        if (error.message.includes('already registered')) {
+        if (error.message && error.message.includes('already registered')) {
           toast.error('이미 가입된 전화번호입니다. 로그인 페이지로 이동합니다.');
           router.push('/login');
           return;

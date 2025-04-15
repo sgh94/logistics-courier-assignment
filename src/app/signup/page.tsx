@@ -45,21 +45,21 @@ export default function SignupPage() {
       setIsLoading(true);
       // 전화번호 국제 형식으로 변환
       const formattedPhone = formatPhoneNumber(formData.phone);
-      
+
       const { success, error } = await requestPhoneVerification(formattedPhone);
-      
+
       if (!success) {
         toast.error('인증번호 발송에 실패했습니다. 다시 시도해주세요.');
         console.error('Verification request error:', error);
         return;
       }
-      
+
       toast.success('인증번호가 발송되었습니다. SMS를 확인해주세요.');
       setVerificationRequested(true);
-      
+
       // 전화번호 입력 필드를 형식화된 번호로 업데이트
       setFormData(prev => ({ ...prev, phone: formattedPhone }));
-      
+
     } catch (error) {
       toast.error('인증번호 요청 중 오류가 발생했습니다.');
       console.error('Unexpected error during verification request:', error);
@@ -77,31 +77,31 @@ export default function SignupPage() {
     try {
       setIsLoading(true);
       const { success, data, error } = await verifyPhoneCode(
-        formData.phone, 
+        formData.phone,
         formData.verificationCode
       );
-      
+
       if (!success) {
         toast.error('인증번호가 일치하지 않습니다. 다시 확인해주세요.');
         console.error('Verification error:', error);
         return;
       }
-      
+
       toast.success('핸드폰 번호가 인증되었습니다.');
       setVerificationConfirmed(true);
-      
+
       // 기존 가입자 확인 로직
       if (data && data.existingUser) {
         toast.error('이미 가입된 전화번호입니다. 로그인 페이지로 이동합니다.');
         router.push('/login');
         return;
       }
-      
+
       // 인증 세션 저장
       if (data && data.session) {
-        setAuthSession(data.session);
+        setAuthSession(data.session as any);
       }
-      
+
     } catch (error) {
       toast.error('인증 중 오류가 발생했습니다.');
       console.error('Unexpected error during verification:', error);
@@ -131,20 +131,20 @@ export default function SignupPage() {
       const { data, error } = await signUpWithPhone(
         formData.phone,
         formData.email || null,
-        formData.password, 
+        formData.password,
         {
           name: formData.name,
           role: 'courier', // 항상 택배기사로만 가입 가능
         }
       );
-      
+
       if (error) {
         if (error.message && error.message.includes('already registered')) {
           toast.error('이미 가입된 전화번호입니다. 로그인 페이지로 이동합니다.');
           router.push('/login');
           return;
         }
-        
+
         toast.error('회원가입에 실패했습니다. 다시 시도해주세요.');
         console.error('Signup error:', error);
         return;
@@ -163,7 +163,7 @@ export default function SignupPage() {
   const handleSocialLogin = async (provider: 'google' | 'kakao') => {
     try {
       const { error } = await signInWithSocial(provider);
-      
+
       if (error) {
         toast.error(`${provider === 'google' ? '구글' : '카카오'} 로그인에 실패했습니다.`);
         console.error('Social login error:', error);
@@ -178,7 +178,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-secondary-50">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <h2 className="text-2xl font-bold text-center mb-6">회원가입</h2>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-secondary-700">
@@ -209,7 +209,7 @@ export default function SignupPage() {
               예시: 01012345678 (- 없이 입력)
             </p>
           </div>
-          
+
           {verificationRequested && !verificationConfirmed && (
             <div>
               <label htmlFor="verificationCode" className="block text-sm font-medium text-secondary-700">
@@ -240,13 +240,13 @@ export default function SignupPage() {
               </p>
             </div>
           )}
-          
+
           {verificationConfirmed && (
             <div className="bg-green-50 border border-green-200 rounded-md p-2 text-sm text-green-700">
               핸드폰 번호가 인증되었습니다.
             </div>
           )}
-          
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-secondary-700">
               이메일 (선택)
@@ -260,7 +260,7 @@ export default function SignupPage() {
               className="form-input w-full rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             />
           </div>
-          
+
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-secondary-700">
               비밀번호 <span className="text-red-500">*</span>
@@ -275,7 +275,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-secondary-700">
               비밀번호 확인 <span className="text-red-500">*</span>
@@ -290,7 +290,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-secondary-700">
               이름 <span className="text-red-500">*</span>
@@ -305,7 +305,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-secondary-700">
               역할
@@ -322,7 +322,7 @@ export default function SignupPage() {
               </p>
             </div>
           </div>
-          
+
           <div>
             <button
               type="submit"
@@ -333,7 +333,7 @@ export default function SignupPage() {
             </button>
           </div>
         </form>
-        
+
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -343,7 +343,7 @@ export default function SignupPage() {
               <span className="px-2 bg-white text-secondary-500">또는</span>
             </div>
           </div>
-          
+
           <div className="mt-6 grid grid-cols-2 gap-3">
             <button
               onClick={() => handleSocialLogin('google')}
@@ -352,7 +352,7 @@ export default function SignupPage() {
               <FcGoogle className="text-xl mr-2" />
               <span>구글</span>
             </button>
-            
+
             <button
               onClick={() => handleSocialLogin('kakao')}
               className="flex justify-center items-center py-2 px-4 bg-[#FEE500] hover:bg-[#FADA0A] border border-[#FEE500] rounded-md shadow-sm"
@@ -362,7 +362,7 @@ export default function SignupPage() {
             </button>
           </div>
         </div>
-        
+
         <div className="mt-6 text-center">
           <p className="text-sm text-secondary-600">
             이미 계정이 있으신가요?{' '}

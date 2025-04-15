@@ -3,30 +3,30 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithEmail, signInWithSocial } from '@/lib/auth';
+import { signInWithPhone, signInWithSocial } from '@/lib/auth';
 import toast from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { RiKakaoTalkFill } from 'react-icons/ri';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handlePhoneLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const { data, error } = await signInWithEmail(email, password);
+      const { data, error } = await signInWithPhone(phone, password);
       
       if (error) {
-        // Supabase 에러 코드에 따른 메시지 처리
-        if (error.message.includes('Email not confirmed')) {
-          toast.error('이메일 인증이 필요합니다. 메일함을 확인해주세요.');
+        // 에러 코드에 따른 메시지 처리
+        if (error.message.includes('Phone number not found')) {
+          toast.error('등록되지 않은 핸드폰 번호입니다.');
         } else if (error.message.includes('Invalid login credentials')) {
-          toast.error('이메일 또는 비밀번호가 올바르지 않습니다.');
+          toast.error('핸드폰 번호 또는 비밀번호가 올바르지 않습니다.');
         } else {
           toast.error('로그인에 실패했습니다. 다시 시도해주세요.');
         }
@@ -77,17 +77,18 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <h2 className="text-2xl font-bold text-center mb-6">로그인</h2>
         
-        <form onSubmit={handleEmailLogin} className="space-y-4">
+        <form onSubmit={handlePhoneLogin} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-secondary-700">
-              이메일
+            <label htmlFor="phone" className="block text-sm font-medium text-secondary-700">
+              핸드폰 번호
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="form-input w-full rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+              placeholder="01012345678"
               required
             />
           </div>
@@ -152,6 +153,12 @@ export default function LoginPage() {
             <Link href="/signup" className="text-primary-600 hover:text-primary-500 font-medium">
               회원가입
             </Link>
+          </p>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-xs text-center text-secondary-500">
+            * 핸드폰 번호로 회원가입하신 경우, 핸드폰 번호를 아이디로 사용하세요.
           </p>
         </div>
       </div>

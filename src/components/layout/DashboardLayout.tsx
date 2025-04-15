@@ -146,7 +146,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div
                   key={item.name}
                   onClick={() => handleNavItemClick(item.href)}
-                  className={`group flex items-center px-2 py-2 text-base font-medium rounded-md cursor-pointer ${
+                  className={`group flex items-center px-2 py-3 text-base font-medium rounded-md cursor-pointer min-h-[48px] ${
                     pathname === item.href
                       ? 'bg-primary-100 text-primary-700'
                       : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
@@ -164,11 +164,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </nav>
           </div>
           <div className="flex-shrink-0 flex border-t border-secondary-200 p-4">
-            <div className="flex items-center">
-              <div>
+            <div className="flex items-center w-full">
+              <div className="flex-1">
                 <div className="text-base font-medium text-secondary-700">{user.name}</div>
                 <div className="text-sm font-medium text-secondary-500">{user.email}</div>
               </div>
+              <button
+                onClick={handleSignOut}
+                className="p-3 rounded-full text-secondary-400 hover:text-secondary-500 active:text-secondary-700 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
+                <FiLogOut className="h-6 w-6" />
+              </button>
             </div>
           </div>
         </div>
@@ -189,7 +195,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md min-h-[40px] ${
                       pathname === item.href
                         ? 'bg-primary-100 text-primary-700'
                         : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
@@ -214,7 +220,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="p-1 rounded-full text-secondary-400 hover:text-secondary-500"
+                  className="p-2 rounded-full text-secondary-400 hover:text-secondary-500 min-h-[40px] min-w-[40px] flex items-center justify-center"
                 >
                   <FiLogOut className="h-6 w-6" />
                 </button>
@@ -228,7 +234,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="relative z-10 flex-shrink-0 flex h-16 bg-white shadow">
           <button
             type="button"
-            className="px-4 border-r border-secondary-200 text-secondary-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 lg:hidden"
+            className="px-4 border-r border-secondary-200 text-secondary-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setIsSidebarOpen(true)}
           >
             <span className="sr-only">사이드바 열기</span>

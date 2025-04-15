@@ -131,7 +131,8 @@ export default function EditAssignmentPage({ params }: Params) {
       <div className="mb-6 flex items-center">
         <Link
           href="/dashboard/assignments"
-          className="mr-4 p-2 rounded-md text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100"
+          className="mr-4 p-2 rounded-md text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation"
+          aria-label="돌아가기"
         >
           <FiArrowLeft className="h-5 w-5" />
         </Link>
@@ -229,7 +230,7 @@ export default function EditAssignmentPage({ params }: Params) {
                   />
                 </div>
 
-                <div className="pt-4 flex space-x-3">
+                <div className="pt-4 flex flex-col sm:flex-row gap-3">
                   <button
                     type="submit"
                     disabled={isSaving}

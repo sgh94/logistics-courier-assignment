@@ -31,7 +31,7 @@ export default function SignupPage() {
       language: navigator.language,
       platform: navigator.platform
     });
-    
+
     // Supabase 설정 확인
     console.log('Checking Supabase environment variables:',
       process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SUPABASE_URL is set' : 'SUPABASE_URL is missing',
@@ -56,31 +56,33 @@ export default function SignupPage() {
     }
 
     setLastError(null); // 오류 초기화
-    
+
     try {
       setIsLoading(true);
       // 전화번호 국제 형식으로 변환
       const formattedPhone = formatPhoneNumber(formData.phone);
       console.log('Requesting verification for formatted phone:', formattedPhone);
-      
+
       const { success, error } = await requestPhoneVerification(formattedPhone);
-      
+
       console.log('Verification request result:', { success, error });
-      
+
       if (!success) {
-        const errorMessage = error?.message || '알 수 없는 오류';
+        const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+          ? error.message as string
+          : '알 수 없는 오류';
         setLastError(error);
         toast.error(`인증번호 발송에 실패했습니다: ${errorMessage}`);
         console.error('Verification request error details:', error);
         return;
       }
-      
+
       toast.success('인증번호가 발송되었습니다. SMS를 확인해주세요.');
       setVerificationRequested(true);
-      
+
       // 전화번호 입력 필드를 형식화된 번호로 업데이트
       setFormData(prev => ({ ...prev, phone: formattedPhone }));
-      
+
     } catch (error) {
       setLastError(error);
       toast.error('인증번호 요청 중 오류가 발생했습니다.');
@@ -97,29 +99,31 @@ export default function SignupPage() {
     }
 
     setLastError(null); // 오류 초기화
-    
+
     try {
       setIsLoading(true);
       console.log('Verifying code:', formData.verificationCode, 'for phone:', formData.phone);
-      
+
       const { success, data, error } = await verifyPhoneCode(
-        formData.phone, 
+        formData.phone,
         formData.verificationCode
       );
-      
+
       console.log('Verification result:', { success, data, error });
-      
+
       if (!success) {
-        const errorMessage = error?.message || '알 수 없는 오류';
+        const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+          ? error.message as string
+          : '알 수 없는 오류';
         setLastError(error);
         toast.error(`인증번호가 일치하지 않습니다: ${errorMessage}`);
         console.error('Verification error details:', error);
         return;
       }
-      
+
       toast.success('핸드폰 번호가 인증되었습니다.');
       setVerificationConfirmed(true);
-      
+
       // 기존 가입자 확인 로직
       if (data && data.existingUser) {
         console.log('User already exists:', data.existingUser);
@@ -127,13 +131,13 @@ export default function SignupPage() {
         router.push('/login');
         return;
       }
-      
+
       // 인증 세션 저장
       if (data && data.session) {
         console.log('Auth session received:', data.session);
-        setAuthSession(data.session);
+        setAuthSession(data.session as any);
       }
-      
+
     } catch (error) {
       setLastError(error);
       toast.error('인증 중 오류가 발생했습니다.');
@@ -160,33 +164,38 @@ export default function SignupPage() {
     }
 
     setLastError(null); // 오류 초기화
-    
+
     try {
       console.log('Submitting signup with verified phone:', formData.phone);
-      
+
       // 인증된 세션을 사용하여 회원가입 진행
       const { data, error } = await signUpWithPhone(
         formData.phone,
         formData.email || null,
-        formData.password, 
+        formData.password,
         {
           name: formData.name,
           role: 'courier', // 항상 택배기사로만 가입 가능
         }
       );
-      
+
       console.log('Signup result:', { data, error });
-      
+
       if (error) {
         setLastError(error);
-        
-        if (error.message && error.message.includes('already registered')) {
-          toast.error('이미 가입된 전화번호입니다. 로그인 페이지로 이동합니다.');
-          router.push('/login');
-          return;
+
+        if (typeof error === 'object' && error !== null && 'message' in error) {
+          const errorMessage = error.message as string;
+          if (errorMessage.includes('already registered')) {
+            toast.error('이미 가입된 전화번호입니다. 로그인 페이지로 이동합니다.');
+            router.push('/login');
+            return;
+          }
         }
-        
-        const errorMessage = error?.message || '알 수 없는 오류';
+
+        const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+          ? error.message as string
+          : '알 수 없는 오류';
         toast.error(`회원가입에 실패했습니다: ${errorMessage}`);
         console.error('Signup error details:', error);
         return;
@@ -207,7 +216,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-secondary-50">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <h2 className="text-2xl font-bold text-center mb-6">회원가입</h2>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-secondary-700">
@@ -238,7 +247,7 @@ export default function SignupPage() {
               예시: 01012345678 (- 없이 입력)
             </p>
           </div>
-          
+
           {verificationRequested && !verificationConfirmed && (
             <div>
               <label htmlFor="verificationCode" className="block text-sm font-medium text-secondary-700">
@@ -269,13 +278,13 @@ export default function SignupPage() {
               </p>
             </div>
           )}
-          
+
           {verificationConfirmed && (
             <div className="bg-green-50 border border-green-200 rounded-md p-2 text-sm text-green-700">
               핸드폰 번호가 인증되었습니다.
             </div>
           )}
-          
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-secondary-700">
               이메일 (선택)
@@ -289,7 +298,7 @@ export default function SignupPage() {
               className="form-input w-full rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
             />
           </div>
-          
+
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-secondary-700">
               비밀번호 <span className="text-red-500">*</span>
@@ -304,7 +313,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-secondary-700">
               비밀번호 확인 <span className="text-red-500">*</span>
@@ -319,7 +328,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-secondary-700">
               이름 <span className="text-red-500">*</span>
@@ -334,7 +343,7 @@ export default function SignupPage() {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-secondary-700">
               역할
@@ -351,7 +360,7 @@ export default function SignupPage() {
               </p>
             </div>
           </div>
-          
+
           <div>
             <button
               type="submit"
@@ -362,7 +371,7 @@ export default function SignupPage() {
             </button>
           </div>
         </form>
-        
+
         <div className="mt-6 text-center">
           <p className="text-sm text-secondary-600">
             이미 계정이 있으신가요?{' '}
@@ -371,7 +380,7 @@ export default function SignupPage() {
             </Link>
           </p>
         </div>
-        
+
         {/* 디버깅용 오류 정보 (개발 환경에서만 표시) */}
         {process.env.NODE_ENV === 'development' && lastError && (
           <div className="mt-8 p-3 bg-red-50 border border-red-200 rounded text-xs overflow-auto max-h-60">
@@ -391,7 +400,7 @@ export default function SignupPage() {
             )}
           </div>
         )}
-        
+
         {/* 디버깅용 상태 정보 (개발 환경에서만 표시) */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-4 p-3 bg-gray-100 rounded text-xs overflow-auto max-h-40 opacity-50 hover:opacity-100">

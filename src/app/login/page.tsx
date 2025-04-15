@@ -32,12 +32,16 @@ export default function LoginPage() {
     try {
       const formattedPhone = formatPhoneNumber(phone);
       const { data, error } = await signInWithPhone(formattedPhone, password);
-      
+
       if (error) {
         // 에러 코드에 따른 메시지 처리
-        if (error.message && error.message.includes('Invalid phone')) {
+        const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+          ? error.message as string
+          : '';
+
+        if (errorMessage.includes('Invalid phone')) {
           toast.error('등록되지 않은 핸드폰 번호입니다.');
-        } else if (error.message && error.message.includes('Invalid login credentials')) {
+        } else if (errorMessage.includes('Invalid login credentials')) {
           toast.error('핸드폰 번호 또는 비밀번호가 올바르지 않습니다.');
         } else {
           toast.error('로그인에 실패했습니다. 다시 시도해주세요.');
@@ -48,11 +52,11 @@ export default function LoginPage() {
       }
 
       // 프로필 정보를 확인하여 로그인 완료 처리
-      if (data && data.profile) {
-        toast.success(`안녕하세요, ${data.profile.name}님!`);
-        
+      if (data && data.user) {
+        toast.success(`안녕하세요, ${data.user.user_metadata.name}님!`);
+
         // 역할에 따라 다른 페이지로 리다이렉트
-        if (data.profile.role === 'admin') {
+        if (data.user.user_metadata.role === 'admin') {
           router.push('/dashboard/statistics');
         } else {
           router.push('/dashboard/assignments');
@@ -74,7 +78,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-secondary-50">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <h2 className="text-2xl font-bold text-center mb-6">로그인</h2>
-        
+
         <form onSubmit={handlePhoneLogin} className="space-y-4">
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-secondary-700">
@@ -93,7 +97,7 @@ export default function LoginPage() {
               예시: 01012345678 (- 없이 입력)
             </p>
           </div>
-          
+
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-secondary-700">
               비밀번호
@@ -107,7 +111,7 @@ export default function LoginPage() {
               required
             />
           </div>
-          
+
           <div>
             <button
               type="submit"
@@ -118,7 +122,7 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-        
+
         <div className="mt-6 text-center">
           <p className="text-sm text-secondary-600">
             계정이 없으신가요?{' '}

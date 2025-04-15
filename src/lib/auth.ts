@@ -2,49 +2,76 @@ import { supabase } from './supabase';
 
 // 핸드폰 번호로 인증 코드 요청
 export const requestPhoneVerification = async (phone: string) => {
-  // Supabase의 OTP 기능을 사용하여 SMS 발송
-  const { data, error } = await supabase.auth.signInWithOtp({
-    phone: phone,
-  });
+  // 디버깅을 위한 로그 추가
+  console.log('Requesting phone verification for:', phone);
   
-  if (error) {
-    console.error('Phone verification request error:', error);
-    return { success: false, error };
+  try {
+    // Supabase의 OTP 기능을 사용하여 SMS 발송
+    const { data, error } = await supabase.auth.signInWithOtp({
+      phone: phone,
+    });
+    
+    // 응답 로깅
+    console.log('Supabase OTP response:', { data, error });
+    
+    if (error) {
+      console.error('Phone verification request error:', error);
+      return { success: false, error };
+    }
+    
+    return { success: true, error: null };
+  } catch (e) {
+    // 예외 로깅
+    console.error('Exception during phone verification request:', e);
+    return { success: false, error: e };
   }
-  
-  return { success: true, error: null };
 };
 
 // 핸드폰 인증 코드 확인
 export const verifyPhoneCode = async (phone: string, code: string) => {
-  // Supabase의 OTP 검증 기능 사용
-  const { data, error } = await supabase.auth.verifyOtp({
-    phone: phone,
-    token: code,
-    type: 'sms'
-  });
+  // 디버깅 로그
+  console.log('Verifying code for phone:', phone, 'Code:', code);
   
-  if (error) {
-    console.error('Phone verification error:', error);
-    return { success: false, error };
-  }
-  
-  // 인증 성공 시 사용자 프로필 확인
-  const { data: existingUser, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('phone', phone)
-    .maybeSingle();
+  try {
+    // Supabase의 OTP 검증 기능 사용
+    const { data, error } = await supabase.auth.verifyOtp({
+      phone: phone,
+      token: code,
+      type: 'sms'
+    });
+    
+    // 응답 로깅
+    console.log('Supabase verify OTP response:', { data, error });
+    
+    if (error) {
+      console.error('Phone verification error:', error);
+      return { success: false, error };
+    }
+    
+    // 인증 성공 시 사용자 프로필 확인
+    const { data: existingUser, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('phone', phone)
+      .maybeSingle();
+    
+    // 사용자 조회 결과 로깅
+    console.log('User lookup result:', { existingUser, userError });
 
-  return { 
-    success: true, 
-    data: { 
-      session: data.session, 
-      user: data.user,
-      existingUser: existingUser
-    },
-    error: null 
-  };
+    return { 
+      success: true, 
+      data: { 
+        session: data.session, 
+        user: data.user,
+        existingUser: existingUser
+      },
+      error: null 
+    };
+  } catch (e) {
+    // 예외 로깅
+    console.error('Exception during code verification:', e);
+    return { success: false, error: e };
+  }
 };
 
 // 핸드폰 인증 및 회원가입
@@ -57,87 +84,119 @@ export const signUpWithPhone = async (
     role: 'admin' | 'courier' 
   }
 ) => {
-  // 1. 사용자 인증 계정 생성
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    phone: phone,
-    password: password,
-    email: email || undefined,
-    options: {
-      data: {
-        name: userData.name,
-        role: userData.role
-      }
-    }
-  });
+  // 디버깅 로그
+  console.log('Signing up user with phone:', phone, 'email:', email);
   
-  if (authError) return { data: null, error: authError };
-  
-  // 2. 사용자 프로필 정보 저장
-  if (authData.user) {
-    const { error: profileError } = await supabase
-      .from('users')
-      .insert([
-        { 
-          id: authData.user.id,
-          phone: phone,
-          email: email || null,
+  try {
+    // 1. 사용자 인증 계정 생성
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      phone: phone,
+      password: password,
+      email: email || undefined,
+      options: {
+        data: {
           name: userData.name,
           role: userData.role
         }
-      ]);
-    
-    if (profileError) {
-      console.error('Error creating user profile:', profileError);
-      
-      // 프로필 생성 실패 시 인증 계정 삭제 시도 (롤백)
-      try {
-        await supabase.auth.admin.deleteUser(authData.user.id);
-      } catch (deleteError) {
-        console.error('Error rolling back user creation:', deleteError);
       }
+    });
+    
+    // 응답 로깅
+    console.log('Supabase signUp response:', { authData, authError });
+    
+    if (authError) return { data: null, error: authError };
+    
+    // 2. 사용자 프로필 정보 저장
+    if (authData.user) {
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert([
+          { 
+            id: authData.user.id,
+            phone: phone,
+            email: email || null,
+            name: userData.name,
+            role: userData.role
+          }
+        ]);
       
-      return { data: null, error: profileError };
+      // 프로필 생성 로깅
+      console.log('User profile creation result:', { profileError });
+      
+      if (profileError) {
+        console.error('Error creating user profile:', profileError);
+        
+        // 프로필 생성 실패 시 인증 계정 삭제 시도 (롤백)
+        try {
+          await supabase.auth.admin.deleteUser(authData.user.id);
+        } catch (deleteError) {
+          console.error('Error rolling back user creation:', deleteError);
+        }
+        
+        return { data: null, error: profileError };
+      }
     }
+    
+    return { data: authData, error: null };
+  } catch (e) {
+    // 예외 로깅
+    console.error('Exception during signup:', e);
+    return { data: null, error: e };
   }
-  
-  return { data: authData, error: null };
 };
 
 // 핸드폰 번호로 로그인
 export const signInWithPhone = async (phone: string, password: string) => {
-  // Supabase 인증으로 직접 전화번호 로그인
-  const { data, error } = await supabase.auth.signInWithPassword({
-    phone: phone,
-    password: password,
-  });
+  // 디버깅 로그
+  console.log('Signing in with phone:', phone);
   
-  if (error) {
-    console.error('Login error:', error);
-    return { data: null, error };
-  }
+  try {
+    // Supabase 인증으로 직접 전화번호 로그인
+    const { data, error } = await supabase.auth.signInWithPassword({
+      phone: phone,
+      password: password,
+    });
+    
+    // 응답 로깅
+    console.log('Supabase sign in response:', { data, error });
+    
+    if (error) {
+      console.error('Login error:', error);
+      return { data: null, error };
+    }
 
-  // 사용자 프로필 정보 가져오기
-  const { data: userData, error: profileError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', data.user.id)
-    .single();
-  
-  if (profileError) {
-    console.error('Error fetching user profile:', profileError);
-    return { data, error: profileError };
+    // 사용자 프로필 정보 가져오기
+    const { data: userData, error: profileError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+    
+    // 사용자 프로필 로깅
+    console.log('User profile fetch result:', { userData, profileError });
+    
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError);
+      return { data, error: profileError };
+    }
+    
+    return { 
+      data: {
+        ...data,
+        profile: userData
+      }, 
+      error: null 
+    };
+  } catch (e) {
+    // 예외 로깅
+    console.error('Exception during sign in:', e);
+    return { data: null, error: e };
   }
-  
-  return { 
-    data: {
-      ...data,
-      profile: userData
-    }, 
-    error: null 
-  };
 };
 
 export const signInWithSocial = async (provider: 'google' | 'kakao') => {
+  console.log('Signing in with social provider:', provider);
+  
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
@@ -145,16 +204,27 @@ export const signInWithSocial = async (provider: 'google' | 'kakao') => {
     }
   });
   
+  console.log('Social sign in response:', { data, error });
+  
   return { data, error };
 };
 
 export const signOut = async () => {
+  console.log('Signing out user');
+  
   const { error } = await supabase.auth.signOut();
+  
+  console.log('Sign out result:', { error });
+  
   return { error };
 };
 
 export const getCurrentUser = async () => {
+  console.log('Getting current user');
+  
   const { data: { session } } = await supabase.auth.getSession();
+  
+  console.log('Current session:', session);
   
   if (!session) return { user: null };
   
@@ -163,6 +233,8 @@ export const getCurrentUser = async () => {
     .select('*')
     .eq('id', session.user.id)
     .single();
+  
+  console.log('Current user data:', { data, error });
   
   if (error) {
     console.error('Error fetching user profile:', error);

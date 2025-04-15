@@ -18,6 +18,29 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* 모바일 터치 이벤트 최적화 */
+@media (max-width: 768px) {
+  button, a, [role="button"], .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+  
+  .card-header button, .card-body button {
+    padding: 8px 12px;
+  }
+}
+
+/* iOS에서의 터치 영역 관련 문제 해결 */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 터치 이벤트 명시적 허용 */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
 @layer components {
   .btn-primary {
     @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200;
@@ -45,5 +68,13 @@ body {
   
   .card-header {
     @apply px-6 py-4 border-b border-secondary-200 bg-secondary-50 font-semibold;
+  }
+  
+  /* 모바일 터치에 최적화된 버튼 스타일 */
+  .mobile-btn {
+    @apply p-3 rounded-md touch-manipulation;
+    min-height: 44px;
+    position: relative;
+    z-index: 1;
   }
 }

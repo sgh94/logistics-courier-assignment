@@ -3,11 +3,22 @@
 import { useState, useEffect } from 'react';
 import { getCurrentUser } from '@/lib/auth';
 import { getUserVotes, saveVote, getAllVotes } from '@/lib/votes';
-import { User, Vote } from '@/lib/supabase';
-import toast from 'react-hot-toast';
+import { getLogisticsCenters } from '@/lib/centers';
+import { User, LogisticsCenter } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FiCheckCircle, FiXCircle, FiCalendar, FiInfo } from 'react-icons/fi';
+import toast from 'react-hot-toast';
+import { 
+  FiCalendar, 
+  FiUser, 
+  FiMessageSquare, 
+  FiMapPin,
+  FiCheckCircle, 
+  FiXCircle, 
+  FiInfo
+} from 'react-icons/fi';
 
 export default function VotesPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -18,8 +29,12 @@ export default function VotesPage() {
     new Date(),
     new Date(new Date().setDate(new Date().getDate() + 14))
   ]);
-  const [votes, setVotes] = useState<Vote[]>([]);
+  const [votes, setVotes] = useState<any[]>([]);
   const [allVotes, setAllVotes] = useState<any[]>([]);
+  const [voteNotes, setVoteNotes] = useState('');
+  const [logisticsCenters, setLogisticsCenters] = useState<LogisticsCenter[]>([]);
+  const [selectedCenterId, setSelectedCenterId] = useState<string>('');
+  const router = useRouter();
 
   useEffect(() => {
     async function loadData() {
@@ -33,6 +48,10 @@ export default function VotesPage() {
         
         setUser(user);
         setIsAdmin(user.role === 'admin');
+        
+        // 물류센터 목록 로드
+        const centers = await getLogisticsCenters();
+        setLogisticsCenters(centers);
         
         if (user.role === 'admin') {
           // 관리자: 모든 투표 로드
@@ -90,10 +109,13 @@ export default function VotesPage() {
       await saveVote({
         courier_id: user.id,
         date: dateString,
-        is_available: isAvailable
+        is_available: isAvailable,
+        notes: voteNotes.trim() || undefined,
+        preferred_center_id: selectedCenterId || undefined
       });
       
       toast.success(`${dateString} 날짜에 ${isAvailable ? '근무 가능' : '근무 불가능'}으로 투표했습니다.`);
+      setVoteNotes('');
       
       // 투표 목록 갱신
       loadUserVotes(user.id);
@@ -177,6 +199,12 @@ export default function VotesPage() {
                           근무 가능 여부
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">
+                          선호 물류센터
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">
+                          특이사항
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-secondary-500 uppercase tracking-wider">
                           투표 일시
                         </th>
                       </tr>
@@ -201,6 +229,12 @@ export default function VotesPage() {
                               </span>
                             )}
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-900">
+                            {vote.preferred_centers?.name || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-secondary-900 max-w-xs truncate">
+                            {vote.notes || '-'}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-500">
                             {new Date(vote.created_at).toLocaleString()}
                           </td>
@@ -220,8 +254,8 @@ export default function VotesPage() {
             <div className="card-header">
               <h3 className="text-lg font-semibold">근무 가능 여부 투표하기</h3>
             </div>
-            <div className="card-body">
-              <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 items-start md:items-center">
+            <div className="card-body space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-secondary-700 mb-1">날짜 선택</label>
                   <DatePicker
@@ -232,22 +266,50 @@ export default function VotesPage() {
                     dateFormat="yyyy-MM-dd"
                   />
                 </div>
-                <div className="flex space-x-2">
-                  <button 
-                    onClick={() => handleVote(true)}
-                    className="flex items-center bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+
+                <div>
+                  <label className="block text-sm font-medium text-secondary-700 mb-1">선호 물류센터 (선택)</label>
+                  <select
+                    value={selectedCenterId}
+                    onChange={(e) => setSelectedCenterId(e.target.value)}
+                    className="form-input w-full rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                   >
-                    <FiCheckCircle className="h-5 w-5 mr-2" />
-                    근무 가능
-                  </button>
-                  <button 
-                    onClick={() => handleVote(false)}
-                    className="flex items-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
-                  >
-                    <FiXCircle className="h-5 w-5 mr-2" />
-                    근무 불가능
-                  </button>
+                    <option value="">선호 물류센터 없음</option>
+                    {logisticsCenters.map((center) => (
+                      <option key={center.id} value={center.id}>
+                        {center.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-1">특이사항 (선택)</label>
+                <textarea
+                  value={voteNotes}
+                  onChange={(e) => setVoteNotes(e.target.value)}
+                  placeholder="특이사항이 있으면 입력해주세요 (예: 오전만 가능, 특정 지역만 가능 등)"
+                  className="form-input w-full rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                  rows={3}
+                />
+              </div>
+              
+              <div className="flex space-x-2">
+                <button 
+                  onClick={() => handleVote(true)}
+                  className="flex-1 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+                >
+                  <FiCheckCircle className="h-5 w-5 mr-2" />
+                  근무 가능
+                </button>
+                <button 
+                  onClick={() => handleVote(false)}
+                  className="flex-1 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+                >
+                  <FiXCircle className="h-5 w-5 mr-2" />
+                  근무 불가능
+                </button>
               </div>
             </div>
           </div>
@@ -264,11 +326,11 @@ export default function VotesPage() {
                   <p className="text-secondary-500">위에서 날짜를 선택하고 근무 가능 여부를 투표해주세요.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {votes.map((vote) => (
                     <div key={vote.id} className={`p-4 rounded-lg border ${vote.is_available ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{vote.date}</span>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-md font-medium">{vote.date}</span>
                         {vote.is_available ? (
                           <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                             근무 가능
@@ -279,6 +341,25 @@ export default function VotesPage() {
                           </span>
                         )}
                       </div>
+                      
+                      {(vote.preferred_centers || vote.notes) && (
+                        <div className="mt-2 p-3 bg-white rounded-md border border-secondary-200">
+                          {vote.preferred_centers && (
+                            <div className="flex items-center mb-2">
+                              <FiMapPin className="h-4 w-4 text-secondary-500 mr-2" />
+                              <span className="text-sm text-secondary-700">선호 물류센터: {vote.preferred_centers.name}</span>
+                            </div>
+                          )}
+                          
+                          {vote.notes && (
+                            <div className="flex items-start">
+                              <FiMessageSquare className="h-4 w-4 text-secondary-500 mt-0.5 mr-2" />
+                              <span className="text-sm text-secondary-700">{vote.notes}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
                       <div className="mt-2 text-xs text-secondary-500">
                         투표 일시: {new Date(vote.created_at).toLocaleString()}
                       </div>

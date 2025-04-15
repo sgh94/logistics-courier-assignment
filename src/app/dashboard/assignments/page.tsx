@@ -8,7 +8,7 @@ import Link from 'next/link';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import toast from 'react-hot-toast';
-import { FiPlus, FiCalendar, FiMapPin, FiClock, FiUser, FiInfo } from 'react-icons/fi';
+import { FiPlus, FiCalendar, FiMapPin, FiClock, FiUser, FiInfo, FiEdit, FiTrash2 } from 'react-icons/fi';
 
 export default function AssignmentsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -215,15 +215,19 @@ export default function AssignmentsPage() {
                           <div className="flex justify-end space-x-2">
                             <Link
                               href={`/dashboard/assignments/edit/${assignment.id}`}
-                              className="btn-link text-primary-600 hover:text-primary-900 min-h-[36px] py-1"
+                              className="btn-link text-primary-600 hover:text-primary-900 min-h-[44px] min-w-[44px] p-2 flex items-center"
+                              aria-label="수정"
                             >
-                              수정
+                              <FiEdit className="h-4 w-4 sm:mr-1" />
+                              <span className="hidden sm:inline">수정</span>
                             </Link>
                             <Link
                               href={`/dashboard/assignments/delete/${assignment.id}`}
-                              className="btn-link text-red-600 hover:text-red-900 min-h-[36px] py-1"
+                              className="btn-link text-red-600 hover:text-red-900 min-h-[44px] min-w-[44px] p-2 flex items-center"
+                              aria-label="삭제"
                             >
-                              삭제
+                              <FiTrash2 className="h-4 w-4 sm:mr-1" />
+                              <span className="hidden sm:inline">삭제</span>
                             </Link>
                           </div>
                         </td>

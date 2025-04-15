@@ -1,74 +1,50 @@
 import { supabase } from './supabase';
 
-// 핸드폰 번호로 로그인
-export const signInWithPhone = async (phone: string, password: string) => {
-  // 먼저 핸드폰 번호로 사용자 이메일 조회
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('phone', phone)
-    .single();
-  
-  if (userError) {
-    console.error('Error fetching user by phone:', userError);
-    return { data: null, error: { message: 'Phone number not found' } };
-  }
-  
-  // 찾은 이메일로 로그인
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: userData.email,
-    password,
+// 핸드폰 번호로 인증 코드 요청
+export const requestPhoneVerification = async (phone: string) => {
+  // Supabase의 OTP 기능을 사용하여 SMS 발송
+  const { data, error } = await supabase.auth.signInWithOtp({
+    phone: phone,
   });
   
   if (error) {
-    console.error('Login error:', error);
-    return { data: null, error };
-  }
-
-  // 완전한 사용자 프로필 정보 포함
-  return { 
-    data: {
-      ...data,
-      profile: userData
-    }, 
-    error: null 
-  };
-};
-
-// 핸드폰 번호 SMS 인증 요청
-export const requestPhoneVerification = async (phone: string) => {
-  // SMS 인증 코드 요청 API를 추가해야 함
-  // 이 예시에서는 가상의 함수를 사용합니다
-  try {
-    // 실제 SMS API 연동 필요
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    // SMS 전송 API 호출 (실제 구현 필요)
-    
-    // 세션에 인증 코드와 번호 저장 (간단한 구현을 위해)
-    sessionStorage.setItem('verification_code', verificationCode);
-    sessionStorage.setItem('verification_phone', phone);
-    
-    console.log('Verification code (testing only):', verificationCode);
-    return { success: true, error: null };
-  } catch (error) {
-    console.error('SMS verification request error:', error);
+    console.error('Phone verification request error:', error);
     return { success: false, error };
   }
+  
+  return { success: true, error: null };
 };
 
 // 핸드폰 인증 코드 확인
 export const verifyPhoneCode = async (phone: string, code: string) => {
-  const storedCode = sessionStorage.getItem('verification_code');
-  const storedPhone = sessionStorage.getItem('verification_phone');
+  // Supabase의 OTP 검증 기능 사용
+  const { data, error } = await supabase.auth.verifyOtp({
+    phone: phone,
+    token: code,
+    type: 'sms'
+  });
   
-  if (storedCode === code && storedPhone === phone) {
-    // 인증 성공
-    sessionStorage.removeItem('verification_code');
-    sessionStorage.removeItem('verification_phone');
-    return { success: true, error: null };
+  if (error) {
+    console.error('Phone verification error:', error);
+    return { success: false, error };
   }
   
-  return { success: false, error: { message: 'Invalid verification code' } };
+  // 인증 성공 시 사용자 프로필 확인
+  const { data: existingUser, error: userError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('phone', phone)
+    .maybeSingle();
+
+  return { 
+    success: true, 
+    data: { 
+      session: data.session, 
+      user: data.user,
+      existingUser: existingUser
+    },
+    error: null 
+  };
 };
 
 // 핸드폰 인증 및 회원가입
@@ -81,17 +57,15 @@ export const signUpWithPhone = async (
     role: 'admin' | 'courier' 
   }
 ) => {
-  // 이메일 없는 경우 가상 이메일 생성 (인증을 위해)
-  const userEmail = email || `${phone.replace(/[^0-9]/g, '')}@phone.user`;
-  
   // 1. 사용자 인증 계정 생성
   const { data: authData, error: authError } = await supabase.auth.signUp({
-    email: userEmail,
-    password,
+    phone: phone,
+    password: password,
+    email: email || undefined,
     options: {
-      // 이메일 인증 없이 즉시 인증 처리를 위한 옵션 (실제 환경에서는 SMS 인증 완료 후)
       data: {
-        phone_verified: true
+        name: userData.name,
+        role: userData.role
       }
     }
   });
@@ -127,6 +101,40 @@ export const signUpWithPhone = async (
   }
   
   return { data: authData, error: null };
+};
+
+// 핸드폰 번호로 로그인
+export const signInWithPhone = async (phone: string, password: string) => {
+  // Supabase 인증으로 직접 전화번호 로그인
+  const { data, error } = await supabase.auth.signInWithPassword({
+    phone: phone,
+    password: password,
+  });
+  
+  if (error) {
+    console.error('Login error:', error);
+    return { data: null, error };
+  }
+
+  // 사용자 프로필 정보 가져오기
+  const { data: userData, error: profileError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', data.user.id)
+    .single();
+  
+  if (profileError) {
+    console.error('Error fetching user profile:', profileError);
+    return { data, error: profileError };
+  }
+  
+  return { 
+    data: {
+      ...data,
+      profile: userData
+    }, 
+    error: null 
+  };
 };
 
 export const signInWithSocial = async (provider: 'google' | 'kakao') => {

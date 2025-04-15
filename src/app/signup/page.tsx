@@ -21,11 +21,26 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [verificationRequested, setVerificationRequested] = useState(false);
   const [verificationConfirmed, setVerificationConfirmed] = useState(false);
+  const [authSession, setAuthSession] = useState(null);
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const formatPhoneNumber = (phone: string) => {
+    // 전화번호 형식을 Supabase가 요구하는 국제 표준 형식으로 변환 (+8210XXXXXXXX)
+    // 국내 전화번호 포맷인 경우
+    if (phone.startsWith('0')) {
+      return '+82' + phone.substring(1).replace(/-/g, '');
+    }
+    // 이미 국제 표준 형식인 경우
+    if (phone.startsWith('+')) {
+      return phone.replace(/-/g, '');
+    }
+    // 기타 경우는 국내 번호로 가정
+    return '+82' + phone.replace(/-/g, '');
   };
 
   const handleRequestVerification = async () => {
@@ -36,7 +51,9 @@ export default function SignupPage() {
 
     try {
       setIsLoading(true);
-      const { success, error } = await requestPhoneVerification(formData.phone);
+      const formattedPhone = formatPhoneNumber(formData.phone);
+      
+      const { success, error } = await requestPhoneVerification(formattedPhone);
       
       if (!success) {
         toast.error('인증번호 발송에 실패했습니다. 다시 시도해주세요.');
@@ -46,6 +63,10 @@ export default function SignupPage() {
       
       toast.success('인증번호가 발송되었습니다. SMS를 확인해주세요.');
       setVerificationRequested(true);
+      
+      // 전화번호 입력 필드를 형식화된 번호로 업데이트
+      setFormData(prev => ({ ...prev, phone: formattedPhone }));
+      
     } catch (error) {
       toast.error('인증번호 요청 중 오류가 발생했습니다.');
       console.error('Unexpected error during verification request:', error);
@@ -62,7 +83,10 @@ export default function SignupPage() {
 
     try {
       setIsLoading(true);
-      const { success, error } = await verifyPhoneCode(formData.phone, formData.verificationCode);
+      const { success, data, error } = await verifyPhoneCode(
+        formData.phone, 
+        formData.verificationCode
+      );
       
       if (!success) {
         toast.error('인증번호가 일치하지 않습니다. 다시 확인해주세요.');
@@ -72,6 +96,19 @@ export default function SignupPage() {
       
       toast.success('핸드폰 번호가 인증되었습니다.');
       setVerificationConfirmed(true);
+      
+      // 기존 가입자 확인 로직
+      if (data && data.existingUser) {
+        toast.error('이미 가입된 전화번호입니다. 로그인 페이지로 이동합니다.');
+        router.push('/login');
+        return;
+      }
+      
+      // 인증 세션 저장
+      if (data && data.session) {
+        setAuthSession(data.session);
+      }
+      
     } catch (error) {
       toast.error('인증 중 오류가 발생했습니다.');
       console.error('Unexpected error during verification:', error);
@@ -97,6 +134,7 @@ export default function SignupPage() {
     }
 
     try {
+      // 인증된 세션을 사용하여 회원가입 진행
       const { data, error } = await signUpWithPhone(
         formData.phone,
         formData.email || null,
@@ -108,6 +146,12 @@ export default function SignupPage() {
       );
       
       if (error) {
+        if (error.message.includes('already registered')) {
+          toast.error('이미 가입된 전화번호입니다. 로그인 페이지로 이동합니다.');
+          router.push('/login');
+          return;
+        }
+        
         toast.error('회원가입에 실패했습니다. 다시 시도해주세요.');
         console.error('Signup error:', error);
         return;
@@ -168,6 +212,9 @@ export default function SignupPage() {
                 {verificationRequested ? '재발송' : '인증요청'}
               </button>
             </div>
+            <p className="mt-1 text-xs text-secondary-500">
+              예시: 01012345678 (- 없이 입력)
+            </p>
           </div>
           
           {verificationRequested && !verificationConfirmed && (

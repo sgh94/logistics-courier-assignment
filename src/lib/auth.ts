@@ -1,53 +1,72 @@
 import { supabase } from './supabase';
 
-// 핸드폰 번호로 인증 코드 요청
+// Twilio Verify API를 통한 인증 코드 요청
 export const requestPhoneVerification = async (phone: string) => {
-  // Supabase의 OTP 기능을 사용하여 SMS 발송
-  const { data, error } = await supabase.auth.signInWithOtp({
-    phone: phone,
-  });
-  
-  if (error) {
+  try {
+    // Twilio Verify API 호출 - 서버리스 함수를 통해 API 키 보호
+    const response = await fetch('/api/twilio/verify/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ phone }),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok || !result.success) {
+      console.error('Phone verification request error:', result.error);
+      return { success: false, error: result.error };
+    }
+    
+    return { success: true, error: null };
+  } catch (error) {
     console.error('Phone verification request error:', error);
     return { success: false, error };
   }
-  
-  return { success: true, error: null };
 };
 
-// 핸드폰 인증 코드 확인
+// Twilio Verify API를 통한 인증 코드 확인
 export const verifyPhoneCode = async (phone: string, code: string) => {
-  // Supabase의 OTP 검증 기능 사용
-  const { data, error } = await supabase.auth.verifyOtp({
-    phone: phone,
-    token: code,
-    type: 'sms'
-  });
-  
-  if (error) {
+  try {
+    // Twilio Verify API 호출
+    const response = await fetch('/api/twilio/verify/check', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ phone, code }),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok || !result.success) {
+      console.error('Phone verification error:', result.error);
+      return { success: false, error: result.error };
+    }
+    
+    // 핸드폰 번호로 사용자 검색
+    const { data: existingUser, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('phone', phone)
+      .maybeSingle();
+
+    return { 
+      success: true, 
+      data: { 
+        verified: true,
+        existingUser: existingUser
+      },
+      error: null 
+    };
+  } catch (error) {
     console.error('Phone verification error:', error);
     return { success: false, error };
   }
-  
-  // 인증 성공 시 사용자 프로필 확인
-  const { data: existingUser, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('phone', phone)
-    .maybeSingle();
-
-  return { 
-    success: true, 
-    data: { 
-      session: data.session, 
-      user: data.user,
-      existingUser: existingUser
-    },
-    error: null 
-  };
 };
 
-// 핸드폰 인증 및 회원가입
+// 핸드폰 인증 및 회원가입 (Supabase Authentication 사용)
 export const signUpWithPhone = async (
   phone: string, 
   email: string | null, 
@@ -57,13 +76,16 @@ export const signUpWithPhone = async (
     role: 'admin' | 'courier' 
   }
 ) => {
-  // 1. 사용자 인증 계정 생성
+  // 1. 사용자 인증 계정 생성 - 이메일 필요
+  // 이메일이 없는 경우 가상 이메일 생성
+  const userEmail = email || `${phone.replace(/[^\d]/g, '')}@phone.user`;
+  
   const { data: authData, error: authError } = await supabase.auth.signUp({
-    phone: phone,
+    email: userEmail,
     password: password,
-    email: email || undefined,
     options: {
       data: {
+        phone_number: phone,
         name: userData.name,
         role: userData.role
       }
@@ -103,12 +125,24 @@ export const signUpWithPhone = async (
   return { data: authData, error: null };
 };
 
-// 핸드폰 번호로 로그인
+// 핸드폰 번호로 조회하여 이메일 찾은 후 로그인
 export const signInWithPhone = async (phone: string, password: string) => {
-  // Supabase 인증으로 직접 전화번호 로그인
+  // 먼저 핸드폰 번호로 사용자 이메일 조회
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('phone', phone)
+    .single();
+  
+  if (userError) {
+    console.error('Error fetching user by phone:', userError);
+    return { data: null, error: { message: '등록되지 않은 핸드폰 번호입니다.' } };
+  }
+  
+  // 이메일로 로그인
   const { data, error } = await supabase.auth.signInWithPassword({
-    phone: phone,
-    password: password,
+    email: userData.email,
+    password,
   });
   
   if (error) {
@@ -116,18 +150,6 @@ export const signInWithPhone = async (phone: string, password: string) => {
     return { data: null, error };
   }
 
-  // 사용자 프로필 정보 가져오기
-  const { data: userData, error: profileError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', data.user.id)
-    .single();
-  
-  if (profileError) {
-    console.error('Error fetching user profile:', profileError);
-    return { data, error: profileError };
-  }
-  
   return { 
     data: {
       ...data,
@@ -135,6 +157,55 @@ export const signInWithPhone = async (phone: string, password: string) => {
     }, 
     error: null 
   };
+};
+
+// 핸드폰 인증 후 세션 없이 로그인 (별도의 API 필요)
+export const signInWithPhoneVerified = async (phone: string) => {
+  try {
+    // 핸드폰 번호로 사용자 조회
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('phone', phone)
+      .single();
+    
+    if (userError) {
+      console.error('Error fetching user by phone:', userError);
+      return { data: null, error: { message: '등록되지 않은 핸드폰 번호입니다.' } };
+    }
+    
+    // 서버리스 함수를 통해 사용자 ID로 세션 생성 요청
+    // 이 부분은 보안상 서버사이드에서 처리되어야 함
+    const response = await fetch('/api/auth/login-with-phone', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId: userData.id }),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      return { data: null, error: result.error };
+    }
+    
+    // 세션 설정
+    if (result.session) {
+      await supabase.auth.setSession(result.session);
+    }
+    
+    return { 
+      data: {
+        session: result.session,
+        profile: userData
+      }, 
+      error: null 
+    };
+  } catch (error) {
+    console.error('Login error:', error);
+    return { data: null, error };
+  }
 };
 
 export const signInWithSocial = async (provider: 'google' | 'kakao') => {

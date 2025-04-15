@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signUpWithEmail, signInWithSocial } from '@/lib/auth';
 import toast from 'react-hot-toast';
 import { FcGoogle } from 'react-icons/fc';
 import { RiKakaoTalkFill } from 'react-icons/ri';
+
+// 관리자 가입을 위한 초대 코드 (실제로는 환경변수나 데이터베이스에서 관리해야 함)
+const ADMIN_INVITE_CODE = 'ADMIN123';
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -16,13 +19,23 @@ export default function SignupPage() {
     name: '',
     phone: '',
     role: 'courier' as 'admin' | 'courier',
+    inviteCode: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [showInviteField, setShowInviteField] = useState(false);
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // role이 admin으로 변경되면 초대 코드 필드 표시
+    if (name === 'role' && value === 'admin') {
+      setShowInviteField(true);
+    } else if (name === 'role' && value === 'courier') {
+      setShowInviteField(false);
+      setFormData(prev => ({ ...prev, inviteCode: '' }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,6 +44,13 @@ export default function SignupPage() {
 
     if (formData.password !== formData.confirmPassword) {
       toast.error('비밀번호가 일치하지 않습니다.');
+      setIsLoading(false);
+      return;
+    }
+    
+    // 관리자 역할을 선택했지만 초대 코드가 일치하지 않는 경우
+    if (formData.role === 'admin' && formData.inviteCode !== ADMIN_INVITE_CODE) {
+      toast.error('관리자 초대 코드가 올바르지 않습니다.');
       setIsLoading(false);
       return;
     }
@@ -172,6 +192,26 @@ export default function SignupPage() {
               <option value="admin">관리자</option>
             </select>
           </div>
+          
+          {showInviteField && (
+            <div>
+              <label htmlFor="inviteCode" className="block text-sm font-medium text-secondary-700">
+                관리자 초대 코드
+              </label>
+              <input
+                id="inviteCode"
+                name="inviteCode"
+                type="text"
+                value={formData.inviteCode}
+                onChange={handleChange}
+                className="form-input w-full rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                required
+              />
+              <p className="mt-1 text-xs text-secondary-500">
+                관리자로 가입하려면 초대 코드가 필요합니다.
+              </p>
+            </div>
+          )}
           
           <div>
             <button

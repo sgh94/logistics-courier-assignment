@@ -100,11 +100,19 @@ export default function VotesPage() {
     }
   };
 
+  // 날짜를 YYYY-MM-DD 형식의 문자열로 변환하는 함수 (시간대 오프셋 조정)
+  const formatDateToString = (date: Date): string => {
+    return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+      .toISOString()
+      .split('T')[0];
+  };
+
   const handleVote = async (isAvailable: boolean) => {
     if (!user || !selectedDate) return;
     
     try {
-      const dateString = selectedDate.toISOString().split('T')[0];
+      // 날짜를 시간대 오프셋 조정 후 문자열로 변환
+      const dateString = formatDateToString(selectedDate);
       
       await saveVote({
         courier_id: user.id,

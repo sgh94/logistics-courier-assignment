@@ -33,7 +33,7 @@ export default function VotesPage() {
   const [allVotes, setAllVotes] = useState<any[]>([]);
   const [voteNotes, setVoteNotes] = useState('');
   const [logisticsCenters, setLogisticsCenters] = useState<LogisticsCenter[]>([]);
-  const [selectedCenterId, setSelectedCenterId] = useState<string>('');
+  const [selectedCenterIds, setSelectedCenterIds] = useState<string[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -111,11 +111,12 @@ export default function VotesPage() {
         date: dateString,
         is_available: isAvailable,
         notes: voteNotes.trim() || undefined,
-        preferred_center_id: selectedCenterId || undefined
+        preferred_center_ids: selectedCenterIds.length > 0 ? selectedCenterIds : undefined
       });
       
       toast.success(`${dateString} 날짜에 ${isAvailable ? '근무 가능' : '근무 불가능'}으로 투표했습니다.`);
       setVoteNotes('');
+      setSelectedCenterIds([]);
       
       // 투표 목록 갱신
       loadUserVotes(user.id);
@@ -129,6 +130,16 @@ export default function VotesPage() {
     setDateRange(update);
     if (update[0] && update[1]) {
       loadAllVotes();
+    }
+  };
+
+  const handleCenterChange = (centerId: string) => {
+    if (selectedCenterIds.includes(centerId)) {
+      // 이미 선택된 센터면 제거
+      setSelectedCenterIds(selectedCenterIds.filter(id => id !== centerId));
+    } else {
+      // 선택되지 않은 센터면 추가
+      setSelectedCenterIds([...selectedCenterIds, centerId]);
     }
   };
 
@@ -230,7 +241,9 @@ export default function VotesPage() {
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-secondary-900">
-                            {vote.preferred_centers?.name || '-'}
+                            {vote.preferred_centers && vote.preferred_centers.length > 0
+                              ? vote.preferred_centers.map((center: any) => center.name).join(', ')
+                              : '-'}
                           </td>
                           <td className="px-6 py-4 text-sm text-secondary-900 max-w-xs truncate">
                             {vote.notes || '-'}
@@ -268,19 +281,20 @@ export default function VotesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-secondary-700 mb-1">선호 물류센터 (선택)</label>
-                  <select
-                    value={selectedCenterId}
-                    onChange={(e) => setSelectedCenterId(e.target.value)}
-                    className="form-input w-full rounded-md border-secondary-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                  >
-                    <option value="">선호 물류센터 없음</option>
+                  <label className="block text-sm font-medium text-secondary-700 mb-1">선호 물류센터 (다중 선택 가능)</label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border rounded-md p-3">
                     {logisticsCenters.map((center) => (
-                      <option key={center.id} value={center.id}>
-                        {center.name}
-                      </option>
+                      <label key={center.id} className="flex items-center space-x-2 py-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedCenterIds.includes(center.id)}
+                          onChange={() => handleCenterChange(center.id)}
+                          className="rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-sm">{center.name}</span>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
               </div>
 
@@ -342,12 +356,24 @@ export default function VotesPage() {
                         )}
                       </div>
                       
-                      {(vote.preferred_centers || vote.notes) && (
+                      {((vote.preferred_centers && vote.preferred_centers.length > 0) || vote.notes) && (
                         <div className="mt-2 p-3 bg-white rounded-md border border-secondary-200">
-                          {vote.preferred_centers && (
-                            <div className="flex items-center mb-2">
-                              <FiMapPin className="h-4 w-4 text-secondary-500 mr-2" />
-                              <span className="text-sm text-secondary-700">선호 물류센터: {vote.preferred_centers.name}</span>
+                          {vote.preferred_centers && vote.preferred_centers.length > 0 && (
+                            <div className="flex items-start mb-2">
+                              <FiMapPin className="h-4 w-4 text-secondary-500 mt-0.5 mr-2" />
+                              <div>
+                                <span className="text-sm text-secondary-700 font-medium">선호 물류센터:</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {vote.preferred_centers.map((center: any) => (
+                                    <span 
+                                      key={center.id} 
+                                      className="px-2 py-0.5 text-xs bg-secondary-100 text-secondary-800 rounded-full"
+                                    >
+                                      {center.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
                           )}
                           

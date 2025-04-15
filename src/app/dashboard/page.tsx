@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { getCurrentUser } from '@/lib/auth';
+import { getCourierAssignments, getAllAssignments } from '@/lib/assignments';
+import { getUserVotes, getAllVotes } from '@/lib/votes';
 import { User } from '@/lib/supabase';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 import { 
   FiUsers, 
   FiMapPin, 
@@ -18,21 +21,126 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [todayAssignments, setTodayAssignments] = useState(0);
   const [pendingVotes, setPendingVotes] = useState(0);
+  const [monthlyAssignments, setMonthlyAssignments] = useState(0);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadUserData() {
       try {
         const { user } = await getCurrentUser();
+        if (!user) {
+          toast.error('로그인이 필요합니다.');
+          return;
+        }
+        
         setUser(user);
         
-        // 여기서 오늘의 배치 현황, 투표 현황 등을 가져옵니다
-        // 실제 구현에서는 Supabase에서 데이터를 가져와야 합니다
-        setTodayAssignments(3); // 예시 데이터
-        setPendingVotes(2); // 예시 데이터
+        // 오늘 날짜와 이번달 시작일/종료일 계산
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthStartStr = monthStart.toISOString().split('T')[0];
+        const monthEndStr = today.toISOString().split('T')[0];
+        
+        // 실제 데이터 로드
+        if (user.role === 'admin') {
+          // 관리자: 모든 배치 및 투표 데이터
+          const [assignmentsToday, assignmentsMonth, votesData] = await Promise.all([
+            getAllAssignments(todayStr, todayStr),
+            getAllAssignments(monthStartStr, monthEndStr),
+            getAllVotes(monthStartStr, monthEndStr)
+          ]);
+          
+          setTodayAssignments(assignmentsToday.length);
+          setMonthlyAssignments(assignmentsMonth.length);
+          
+          // 투표 중 오늘 이후의 날짜에 대한 것만 필터링
+          const pendingVotesCount = votesData.filter(vote => {
+            const voteDate = new Date(vote.date);
+            return voteDate >= today;
+          }).length;
+          
+          setPendingVotes(pendingVotesCount);
+          
+          // 최근 활동 (최신 배치와 투표 정보 합치기)
+          const recentAssignments = assignmentsMonth
+            .slice(0, 10)
+            .map(item => ({
+              type: 'assignment',
+              date: item.date,
+              centerName: item.centers?.name || '알 수 없음',
+              courierName: item.couriers?.name || '알 수 없음',
+              created_at: item.created_at
+            }));
+            
+          const recentVotes = votesData
+            .slice(0, 10)
+            .map(item => ({
+              type: 'vote',
+              date: item.date,
+              is_available: item.is_available,
+              courierName: item.users?.name || '알 수 없음',
+              created_at: item.created_at
+            }));
+            
+          const combined = [...recentAssignments, ...recentVotes]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 3);
+            
+          setRecentActivities(combined);
+        } else {
+          // 기사: 자신의 배치 및 투표만
+          const [courierAssignments, courierVotes] = await Promise.all([
+            getCourierAssignments(user.id, monthStartStr, monthEndStr),
+            getUserVotes(user.id, monthStartStr, monthEndStr)
+          ]);
+          
+          const todayAssignmentsCount = courierAssignments.filter(
+            assignment => assignment.date === todayStr
+          ).length;
+          
+          setTodayAssignments(todayAssignmentsCount);
+          setMonthlyAssignments(courierAssignments.length);
+          
+          // 투표 중 오늘 이후의 날짜에 대한 것만 필터링
+          const pendingVotesCount = courierVotes.filter(vote => {
+            const voteDate = new Date(vote.date);
+            return voteDate >= today;
+          }).length;
+          
+          setPendingVotes(pendingVotesCount);
+          
+          // 최근 활동 (본인의 최신 배치와 투표)
+          const recentAssignments = courierAssignments
+            .slice(0, 5)
+            .map(item => ({
+              type: 'assignment',
+              date: item.date,
+              centerName: item.centers?.name || '알 수 없음',
+              created_at: item.created_at
+            }));
+            
+          const recentVotes = courierVotes
+            .slice(0, 5)
+            .map(item => ({
+              type: 'vote',
+              date: item.date,
+              is_available: item.is_available,
+              created_at: item.created_at
+            }));
+            
+          const combined = [...recentAssignments, ...recentVotes]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 3);
+            
+          setRecentActivities(combined);
+        }
 
         setIsLoading(false);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        toast.error('데이터를 불러오는데 실패했습니다.');
         setIsLoading(false);
       }
     }
@@ -74,7 +182,7 @@ export default function DashboardPage() {
             <FiCheckSquare className="h-6 w-6 text-green-600" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-secondary-800">대기 중인 투표</h3>
+            <h3 className="text-lg font-semibold text-secondary-800">투표 현황</h3>
             <p className="text-2xl font-bold text-primary-600">{pendingVotes}개</p>
           </div>
         </div>
@@ -85,7 +193,7 @@ export default function DashboardPage() {
           </div>
           <div>
             <h3 className="text-lg font-semibold text-secondary-800">이번 달 배치</h3>
-            <p className="text-2xl font-bold text-primary-600">15개</p>
+            <p className="text-2xl font-bold text-primary-600">{monthlyAssignments}개</p>
           </div>
         </div>
       </div>
@@ -129,41 +237,53 @@ export default function DashboardPage() {
           </div>
           <div className="card-body">
             <div className="space-y-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 p-2 bg-blue-100 rounded-full">
-                  <FiCalendar className="h-4 w-4 text-blue-600" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-secondary-700">
-                    <span className="font-medium">물류센터 배치</span> - 서울센터에 4월 20일 배치되었습니다.
-                  </p>
-                  <p className="text-xs text-secondary-500 mt-1">2시간 전</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="flex-shrink-0 p-2 bg-green-100 rounded-full">
-                  <FiCheckSquare className="h-4 w-4 text-green-600" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-secondary-700">
-                    <span className="font-medium">근무 투표</span> - 4월 25일 근무 가능으로 투표했습니다.
-                  </p>
-                  <p className="text-xs text-secondary-500 mt-1">어제</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="flex-shrink-0 p-2 bg-yellow-100 rounded-full">
-                  <FiMapPin className="h-4 w-4 text-yellow-600" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-secondary-700">
-                    <span className="font-medium">물류센터 정보</span> - 인천센터 정보가 업데이트되었습니다.
-                  </p>
-                  <p className="text-xs text-secondary-500 mt-1">2일 전</p>
-                </div>
-              </div>
+              {recentActivities.length > 0 ? (
+                recentActivities.map((activity, index) => (
+                  <div key={index} className="flex items-start">
+                    <div className={`flex-shrink-0 p-2 rounded-full ${
+                      activity.type === 'assignment' 
+                        ? 'bg-blue-100' 
+                        : activity.is_available 
+                          ? 'bg-green-100' 
+                          : 'bg-red-100'
+                    }`}>
+                      {activity.type === 'assignment' ? (
+                        <FiCalendar className={`h-4 w-4 ${
+                          activity.type === 'assignment' ? 'text-blue-600' : ''
+                        }`} />
+                      ) : (
+                        <FiCheckSquare className={`h-4 w-4 ${
+                          activity.is_available ? 'text-green-600' : 'text-red-600'
+                        }`} />
+                      )}
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-secondary-700">
+                        {activity.type === 'assignment' ? (
+                          <span className="font-medium">
+                            {isAdmin 
+                              ? `${activity.courierName}님이 ${activity.date}에 ${activity.centerName}에 배치됨` 
+                              : `${activity.date}에 ${activity.centerName}에 배치됨`
+                            }
+                          </span>
+                        ) : (
+                          <span className="font-medium">
+                            {isAdmin 
+                              ? `${activity.courierName}님이 ${activity.date}에 ${activity.is_available ? '근무 가능' : '근무 불가능'}으로 투표함` 
+                              : `${activity.date}에 ${activity.is_available ? '근무 가능' : '근무 불가능'}으로 투표함`
+                            }
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-secondary-500 mt-1">
+                        {new Date(activity.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-secondary-500 py-4">최근 활동이 없습니다.</p>
+              )}
             </div>
           </div>
         </div>

@@ -91,12 +91,12 @@ export default function AssignmentsPage() {
 
   return (
     <div className="py-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h2 className="text-2xl font-semibold text-secondary-800">배치 현황</h2>
         {isAdmin && (
           <Link
             href="/dashboard/assignments/new"
-            className="btn-primary flex items-center"
+            className="btn-primary w-full sm:w-auto"
           >
             <FiPlus className="h-5 w-5 mr-2" />
             새 배치 생성
@@ -110,7 +110,7 @@ export default function AssignmentsPage() {
         </div>
         <div className="card-body">
           <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 items-start md:items-end">
-            <div>
+            <div className="w-full md:w-auto">
               <label className="block text-sm font-medium text-secondary-700 mb-1">배치 기간</label>
               <DatePicker
                 selectsRange={true}
@@ -123,7 +123,7 @@ export default function AssignmentsPage() {
             </div>
             <button 
               onClick={handleSearch} 
-              className="btn-primary"
+              className="btn-primary w-full md:w-auto"
             >
               조회하기
             </button>
@@ -141,7 +141,7 @@ export default function AssignmentsPage() {
               <FiInfo className="h-12 w-12 mx-auto text-secondary-400 mb-4" />
               <p className="text-secondary-600 mb-4">조회된 배치가 없습니다.</p>
               {isAdmin ? (
-                <Link href="/dashboard/assignments/new" className="btn-primary inline-flex items-center">
+                <Link href="/dashboard/assignments/new" className="btn-primary inline-flex">
                   <FiPlus className="h-5 w-5 mr-2" />
                   배치 생성하기
                 </Link>
@@ -212,18 +212,20 @@ export default function AssignmentsPage() {
                       </td>
                       {isAdmin && (
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <Link
-                            href={`/dashboard/assignments/edit/${assignment.id}`}
-                            className="text-primary-600 hover:text-primary-900 mr-4"
-                          >
-                            수정
-                          </Link>
-                          <Link
-                            href={`/dashboard/assignments/delete/${assignment.id}`}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            삭제
-                          </Link>
+                          <div className="flex justify-end space-x-2">
+                            <Link
+                              href={`/dashboard/assignments/edit/${assignment.id}`}
+                              className="btn-link text-primary-600 hover:text-primary-900 min-h-[36px] py-1"
+                            >
+                              수정
+                            </Link>
+                            <Link
+                              href={`/dashboard/assignments/delete/${assignment.id}`}
+                              className="btn-link text-red-600 hover:text-red-900 min-h-[36px] py-1"
+                            >
+                              삭제
+                            </Link>
+                          </div>
                         </td>
                       )}
                     </tr>

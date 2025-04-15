@@ -29,6 +29,26 @@ export async function getAllAssignments(fromDate?: string, toDate?: string) {
   return data;
 }
 
+// 특정 ID의 배치 가져오기
+export async function getAssignmentById(id: string) {
+  const { data, error } = await supabase
+    .from('assignments')
+    .select(`
+      *,
+      couriers:courier_id(id, name, email, phone),
+      centers:logistics_center_id(id, name, address, manager_name, manager_contact)
+    `)
+    .eq('id', id)
+    .single();
+  
+  if (error) {
+    console.error(`Error fetching assignment with id ${id}:`, error);
+    throw error;
+  }
+  
+  return data;
+}
+
 // 특정 날짜의 배치 가져오기
 export async function getAssignmentsByDate(date: string) {
   const { data, error } = await supabase

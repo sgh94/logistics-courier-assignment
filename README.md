@@ -14,7 +14,7 @@
 ## 기술 스택
 - Frontend: Next.js, React, TailwindCSS
 - Backend: Supabase (PostgreSQL)
-- Authentication: Supabase Auth, 소셜 로그인
+- Authentication: Supabase Auth, 핸드폰 SMS 인증
 - Deployment: Vercel
 
 ## 설치 및 실행
@@ -33,6 +33,7 @@ npm run dev
 ```
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SMS_API_KEY=your_sms_api_key  # SMS 인증에 사용할 API 키
 ```
 
 ## 관리자 계정 생성
@@ -68,10 +69,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```sql
 CREATE TABLE users (
   id UUID REFERENCES auth.users NOT NULL PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
+  phone TEXT NOT NULL UNIQUE,
+  email TEXT,
   name TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('admin', 'courier')),
-  phone TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(id)
 );
@@ -137,8 +138,8 @@ CREATE TABLE assignments (
 CREATE TABLE notification_settings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES users(id) NOT NULL UNIQUE,
-  email_enabled BOOLEAN NOT NULL DEFAULT true,
-  sms_enabled BOOLEAN NOT NULL DEFAULT false,
+  email_enabled BOOLEAN NOT NULL DEFAULT false,
+  sms_enabled BOOLEAN NOT NULL DEFAULT true,
   kakao_enabled BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE
@@ -175,13 +176,14 @@ Supabase에서 다음과 같은 RLS(Row Level Security) 정책을 설정해야 �
 ## 문제 해결
 
 ### 로그인 및 인증
-1. 회원가입 시 이메일 인증이 필요합니다. 사용자는 이메일에서 확인 링크를 클릭해야 로그인이 가능합니다.
-2. 인증되지 않은 이메일로 로그인 시도 시 "이메일 인증이 필요합니다. 메일함을 확인해주세요." 메시지가 표시됩니다.
+1. 회원가입 시 핸드폰 번호 인증이 필요합니다. 사용자는 SMS로 받은 인증 코드를 입력해야 로그인이 가능합니다.
+2. 인증되지 않은 핸드폰 번호로 로그인 시도 시 "핸드폰 번호 인증이 필요합니다. SMS를 확인해주세요." 메시지가 표시됩니다.
 3. 회원가입은 택배기사 계정만 가능합니다. 관리자 계정은 데이터베이스에서 직접 생성해야 합니다.
+4. 이메일 주소는 선택 입력 사항입니다.
 
 ### 로그인 과정
 로그인 처리 과정의 흐름:
-1. Supabase 인증을 통한 로그인
+1. Supabase 인증을 통한 핸드폰 SMS 인증
 2. 인증 성공 시 사용자 프로필 데이터 로드
 3. 프로필 검증 및 역할에 따른 라우팅 (관리자는 통계 페이지, 기사는 배치 페이지)
 
@@ -190,5 +192,5 @@ Vercel을 통해 쉽게 배포할 수 있습니다:
 
 1. [Vercel](https://vercel.com) 계정 생성
 2. 이 레포지토리와 연결
-3. 환경 변수 설정 (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)
+3. 환경 변수 설정 (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_SMS_API_KEY)
 4. 배포 버튼 클릭

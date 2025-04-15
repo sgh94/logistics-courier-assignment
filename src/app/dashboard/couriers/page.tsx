@@ -43,6 +43,11 @@ export default function CouriersPage() {
     loadData();
   }, [router]);
 
+  // 모바일 터치 핸들러 - 해당 경로로 이동합니다
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -67,20 +72,23 @@ export default function CouriersPage() {
             <div className="card-header flex justify-between items-center">
               <h3 className="text-lg font-semibold text-secondary-800">{courier.name}</h3>
               <div className="flex space-x-2">
-                <Link
-                  href={`/dashboard/couriers/stats/${courier.id}`}
-                  className="p-2 rounded-md text-secondary-500 hover:text-primary-600 hover:bg-secondary-100"
+                {/* 터치 이벤트 핸들링 개선 */}
+                <button
+                  onClick={() => handleNavigation(`/dashboard/couriers/stats/${courier.id}`)}
+                  className="p-3 rounded-md text-secondary-500 hover:text-primary-600 hover:bg-secondary-100 touch-manipulation"
                   title="기사 통계 보기"
+                  aria-label="기사 통계 보기"
                 >
                   <FiPieChart className="h-5 w-5" />
-                </Link>
-                <Link
-                  href={`/dashboard/couriers/settings/${courier.id}`}
-                  className="p-2 rounded-md text-secondary-500 hover:text-primary-600 hover:bg-secondary-100"
+                </button>
+                <button
+                  onClick={() => handleNavigation(`/dashboard/couriers/settings/${courier.id}`)}
+                  className="p-3 rounded-md text-secondary-500 hover:text-primary-600 hover:bg-secondary-100 touch-manipulation"
                   title="알림 설정"
+                  aria-label="알림 설정"
                 >
                   <FiSettings className="h-5 w-5" />
-                </Link>
+                </button>
               </div>
             </div>
             <div className="card-body">
@@ -102,18 +110,19 @@ export default function CouriersPage() {
               </div>
 
               <div className="mt-4 flex space-x-2">
-                <Link
-                  href={`/dashboard/assignments?courier=${courier.id}`}
-                  className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200"
+                {/* 터치 이벤트 핸들링 개선 */}
+                <button
+                  onClick={() => handleNavigation(`/dashboard/assignments?courier=${courier.id}`)}
+                  className="text-xs px-3 py-2 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 touch-manipulation"
                 >
                   배치 내역
-                </Link>
-                <Link
-                  href={`/dashboard/votes?courier=${courier.id}`}
-                  className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 hover:bg-green-200"
+                </button>
+                <button
+                  onClick={() => handleNavigation(`/dashboard/votes?courier=${courier.id}`)}
+                  className="text-xs px-3 py-2 rounded-full bg-green-100 text-green-800 hover:bg-green-200 touch-manipulation"
                 >
                   투표 내역
-                </Link>
+                </button>
               </div>
             </div>
           </div>

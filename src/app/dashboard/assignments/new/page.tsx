@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getCurrentUser } from '@/lib/auth';
 import { getLogisticsCenters } from '@/lib/centers';
-import { getAvailableCouriers, getAssignedCouriers } from '@/lib/couriers';
+import { getAllCouriersWithVoteStatus, getAssignedCouriers } from '@/lib/couriers';
 import { createMultipleAssignments } from '@/lib/assignments';
 import { sendAssignmentNotification } from '@/lib/notifications';
 import { LogisticsCenter, User } from '@/lib/supabase';
@@ -12,7 +12,13 @@ import Link from 'next/link';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import toast from 'react-hot-toast';
-import { FiArrowLeft, FiSave, FiCheck, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiSave, FiCheck, FiX, FiAlertTriangle } from 'react-icons/fi';
+
+// 투표 상태와 배치 가능 여부가 추가된 기사 타입
+type CourierWithStatus = User & {
+  vote_status: 'available' | 'unavailable' | 'not_voted';
+  is_assigned?: boolean;
+};
 
 export default function NewAssignmentPage() {
   const [logisticsCenters, setLogisticsCenters] = useState<LogisticsCenter[]>([]);
@@ -21,7 +27,7 @@ export default function NewAssignmentPage() {
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
-  const [availableCouriers, setAvailableCouriers] = useState<User[]>([]);
+  const [couriers, setCouriers] = useState<CourierWithStatus[]>([]);
   const [assignedCourierIds, setAssignedCourierIds] = useState<string[]>([]);
   const [selectedCouriers, setSelectedCouriers] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,28 +63,35 @@ export default function NewAssignmentPage() {
     checkPermission();
   }, [router]);
 
-  // 날짜가 선택될 때 가능한 기사 목록 로드
+  // 날짜가 선택될 때 기사 목록 로드
   useEffect(() => {
-    async function loadAvailableCouriers() {
+    async function loadCouriers() {
       if (!selectedDate) return;
       
       try {
         const dateString = selectedDate.toISOString().split('T')[0];
         
-        // 해당 날짜에 근무 가능한 기사 목록 가져오기
-        const availableCouriersData = await getAvailableCouriers(dateString);
-        setAvailableCouriers(availableCouriersData);
+        // 모든 기사 목록 가져오기 (투표 상태 포함)
+        const couriersData = await getAllCouriersWithVoteStatus(dateString);
         
         // 이미 배치된 기사 ID 목록 가져오기
         const assignedIds = await getAssignedCouriers(dateString);
         setAssignedCourierIds(assignedIds);
+        
+        // 배치 상태 표시
+        const couriersWithAssignmentStatus = couriersData.map(courier => ({
+          ...courier,
+          is_assigned: assignedIds.includes(courier.id)
+        }));
+        
+        setCouriers(couriersWithAssignmentStatus);
       } catch (error) {
-        console.error('Error loading available couriers:', error);
-        toast.error('근무 가능한 기사 목록을 불러오는데 실패했습니다.');
+        console.error('Error loading couriers:', error);
+        toast.error('기사 목록을 불러오는데 실패했습니다.');
       }
     }
     
-    loadAvailableCouriers();
+    loadCouriers();
   }, [selectedDate]);
 
   const handleCourierToggle = (courierId: string) => {
@@ -90,11 +103,21 @@ export default function NewAssignmentPage() {
   };
 
   const handleSelectAll = () => {
-    const availableUnassignedIds = availableCouriers
-      .filter(courier => !assignedCourierIds.includes(courier.id))
+    // 이미 배치되지 않은 모든 기사 선택
+    const unassignedCourierIds = couriers
+      .filter(courier => !courier.is_assigned)
       .map(courier => courier.id);
     
-    setSelectedCouriers(availableUnassignedIds);
+    setSelectedCouriers(unassignedCourierIds);
+  };
+
+  const handleSelectAvailable = () => {
+    // 근무 가능하고 아직 배치되지 않은 기사만 선택
+    const availableCourierIds = couriers
+      .filter(courier => courier.vote_status === 'available' && !courier.is_assigned)
+      .map(courier => courier.id);
+    
+    setSelectedCouriers(availableCourierIds);
   };
 
   const handleUnselectAll = () => {
@@ -168,7 +191,13 @@ export default function NewAssignmentPage() {
     );
   }
 
-  const isAlreadyAssigned = (courierId: string) => assignedCourierIds.includes(courierId);
+  // 상태별 기사 수
+  const courierStats = {
+    total: couriers.filter(c => !c.is_assigned).length,
+    available: couriers.filter(c => c.vote_status === 'available' && !c.is_assigned).length,
+    unavailable: couriers.filter(c => c.vote_status === 'unavailable' && !c.is_assigned).length,
+    not_voted: couriers.filter(c => c.vote_status === 'not_voted' && !c.is_assigned).length
+  };
 
   return (
     <div className="py-6">
@@ -296,6 +325,14 @@ export default function NewAssignmentPage() {
               <div className="flex space-x-2">
                 <button
                   type="button"
+                  onClick={handleSelectAvailable}
+                  className="px-2 py-1 text-xs font-semibold rounded text-green-700 bg-green-100 hover:bg-green-200"
+                >
+                  <FiCheck className="inline-block mr-1" />
+                  근무 가능만
+                </button>
+                <button
+                  type="button"
                   onClick={handleSelectAll}
                   className="px-2 py-1 text-xs font-semibold rounded text-primary-700 bg-primary-100 hover:bg-primary-200"
                 >
@@ -312,56 +349,117 @@ export default function NewAssignmentPage() {
                 </button>
               </div>
             </div>
+            <div className="p-4 bg-secondary-50 border-b border-secondary-200">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-medium">기사 현황:</span>
+                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                  근무 가능: {courierStats.available}명
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800">
+                  투표 안함: {courierStats.not_voted}명
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800">
+                  근무 불가: {courierStats.unavailable}명
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-secondary-200 text-secondary-800 ml-auto">
+                  총 배치 가능: {courierStats.total}명
+                </span>
+              </div>
+            </div>
             <div className="card-body">
-              {availableCouriers.length === 0 ? (
+              {couriers.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-secondary-600 mb-4">해당 날짜에 근무 가능한 기사가 없습니다.</p>
-                  <p className="text-secondary-500">기사들이 근무 가능 여부를 투표해야 합니다.</p>
+                  <p className="text-secondary-600 mb-4">택배기사가 없습니다.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {availableCouriers.map((courier) => {
-                    const isAssigned = isAlreadyAssigned(courier.id);
-                    const isSelected = selectedCouriers.includes(courier.id);
-                    
-                    return (
-                      <div 
-                        key={courier.id}
-                        className={`p-4 rounded-lg border ${
-                          isAssigned
-                            ? 'border-yellow-200 bg-yellow-50'
-                            : isSelected
-                              ? 'border-primary-200 bg-primary-50'
-                              : 'border-secondary-200 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="text-lg font-medium text-secondary-800">{courier.name}</h4>
-                            <p className="text-sm text-secondary-600">{courier.email}</p>
-                            {courier.phone && <p className="text-sm text-secondary-500">{courier.phone}</p>}
+                  {couriers
+                    .filter(courier => !courier.is_assigned) // 이미 배치된 기사는 제외
+                    .map((courier) => {
+                      const isSelected = selectedCouriers.includes(courier.id);
+                      let statusBg = 'bg-white border-secondary-200';
+                      let statusBadge = null;
+                      
+                      if (courier.vote_status === 'available') {
+                        statusBadge = (
+                          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            근무 가능
+                          </span>
+                        );
+                        if (isSelected) {
+                          statusBg = 'bg-green-50 border-green-200';
+                        }
+                      } else if (courier.vote_status === 'unavailable') {
+                        statusBadge = (
+                          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            근무 불가
+                          </span>
+                        );
+                        if (isSelected) {
+                          statusBg = 'bg-red-50 border-red-200';
+                        }
+                      } else {
+                        // 투표하지 않은 경우
+                        statusBadge = (
+                          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            투표 안함
+                          </span>
+                        );
+                        if (isSelected) {
+                          statusBg = 'bg-yellow-50 border-yellow-200';
+                        }
+                      }
+                      
+                      // 선택된 경우 스타일 추가
+                      if (isSelected) {
+                        statusBg += ' ring-2 ring-primary-500 ring-opacity-50';
+                      }
+                      
+                      return (
+                        <div 
+                          key={courier.id}
+                          className={`p-4 rounded-lg border ${statusBg} cursor-pointer`}
+                          onClick={() => handleCourierToggle(courier.id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-lg font-medium text-secondary-800">{courier.name}</h4>
+                              <p className="text-sm text-secondary-600">{courier.email}</p>
+                              {courier.phone && <p className="text-sm text-secondary-500">{courier.phone}</p>}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {statusBadge}
+                              <button
+                                type="button"
+                                className={`w-6 h-6 rounded-full ${
+                                  isSelected
+                                    ? 'bg-primary-500 text-white'
+                                    : 'bg-white border border-secondary-300'
+                                } flex items-center justify-center focus:outline-none`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCourierToggle(courier.id);
+                                }}
+                              >
+                                {isSelected && <FiCheck className="h-4 w-4" />}
+                              </button>
+                            </div>
                           </div>
-                          {isAssigned ? (
-                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                              이미 배치됨
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleCourierToggle(courier.id)}
-                              className={`w-6 h-6 rounded-full ${
-                                isSelected
-                                  ? 'bg-primary-500 text-white'
-                                  : 'bg-white border border-secondary-300'
-                              } flex items-center justify-center focus:outline-none`}
-                            >
-                              {isSelected && <FiCheck className="h-4 w-4" />}
-                            </button>
-                          )}
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                </div>
+              )}
+              
+              {selectedCouriers.some(id => {
+                const courier = couriers.find(c => c.id === id);
+                return courier && courier.vote_status === 'unavailable';
+              }) && (
+                <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md flex items-start">
+                  <FiAlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <p className="text-sm text-yellow-700">
+                    근무 불가능으로 투표한 기사가 포함되어 있습니다. 해당 기사들은 근무가 어려울 수 있으니 확인해주세요.
+                  </p>
                 </div>
               )}
             </div>

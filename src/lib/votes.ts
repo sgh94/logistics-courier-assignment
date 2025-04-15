@@ -4,7 +4,10 @@ import { supabase, Vote } from './supabase';
 export async function getUserVotes(courierId: string, fromDate?: string, toDate?: string) {
   let query = supabase
     .from('votes')
-    .select('*')
+    .select(`
+      *,
+      preferred_centers:preferred_center_id(id, name)
+    `)
     .eq('courier_id', courierId)
     .order('date', { ascending: true });
   
@@ -30,7 +33,11 @@ export async function getUserVotes(courierId: string, fromDate?: string, toDate?
 export async function getVotesByDate(date: string) {
   const { data, error } = await supabase
     .from('votes')
-    .select('*, users:courier_id(name, email, phone)')
+    .select(`
+      *,
+      users:courier_id(name, email, phone),
+      preferred_centers:preferred_center_id(id, name)
+    `)
     .eq('date', date);
   
   if (error) {
@@ -45,7 +52,11 @@ export async function getVotesByDate(date: string) {
 export async function getAllVotes(fromDate?: string, toDate?: string) {
   let query = supabase
     .from('votes')
-    .select('*, users:courier_id(name, email, phone)')
+    .select(`
+      *,
+      users:courier_id(name, email, phone),
+      preferred_centers:preferred_center_id(id, name)
+    `)
     .order('date', { ascending: true });
   
   if (fromDate) {
@@ -87,10 +98,15 @@ export async function saveVote(vote: Omit<Vote, 'id' | 'created_at'>) {
       .from('votes')
       .update({
         is_available: vote.is_available,
+        notes: vote.notes,
+        preferred_center_id: vote.preferred_center_id,
         updated_at: new Date().toISOString()
       })
       .eq('id', existingVote.id)
-      .select()
+      .select(`
+        *,
+        preferred_centers:preferred_center_id(id, name)
+      `)
       .single();
     
     if (error) {
@@ -104,7 +120,10 @@ export async function saveVote(vote: Omit<Vote, 'id' | 'created_at'>) {
     const { data, error } = await supabase
       .from('votes')
       .insert([vote])
-      .select()
+      .select(`
+        *,
+        preferred_centers:preferred_center_id(id, name)
+      `)
       .single();
     
     if (error) {

@@ -8,10 +8,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // 기본 테이블 타입 정의
 export type User = {
   id: string;
-  email: string;
+  phone: string;
+  email?: string;
   role: 'admin' | 'courier';
   name: string;
-  phone?: string;
   created_at: string;
 };
 

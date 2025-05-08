@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, User } from '@/lib/auth';
 import { getCourierAssignments, getAllAssignments } from '@/lib/assignments';
 import { getUserVotes, getAllVotes } from '@/lib/votes';
-import { User } from '@/lib/supabase';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { 

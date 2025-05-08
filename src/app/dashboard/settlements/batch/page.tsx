@@ -1,181 +1,558 @@
-"use client";
+'use client';
 
-import React, { useState } from 'react';
-import { redirect } from 'next/navigation';
-import { createSettlement, createKurlySettlement, createCoupangSettlement } from '@/lib/settlements';
-import BatchSettlementForm from '@/components/settlements/BatchSettlementForm';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm, useFieldArray, Control, useWatch } from 'react-hook-form';
+import { 
+  CreateKurlySettlementDTO, 
+  CreateCoupangSettlementDTO,
+  BatchKurlySettlementDTO,
+  BatchCoupangSettlementDTO
+} from '@/lib/types/settlement';
+import { batchCreateKurlySettlements, batchCreateCoupangSettlements } from '@/lib/settlements';
+import { format } from 'date-fns';
+
+type SettlementType = 'kurly' | 'coupang';
+
+interface BatchFormProps {
+  type: SettlementType;
+  onSubmit: (data: any) => Promise<void>;
+  onCancel: () => void;
+}
+
+function KurlyBatchForm({ onSubmit, onCancel }: BatchFormProps) {
+  const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<BatchKurlySettlementDTO>({
+    defaultValues: {
+      settlement_date: format(new Date(), 'yyyy-MM-dd'),
+      settlements: [
+        {
+          company_name: '',
+          settlement_date: format(new Date(), 'yyyy-MM-dd'),
+          amount: 0,
+          settlement_amount: 0,
+          supply_price: 0
+        }
+      ]
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'settlements'
+  });
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700">정산일자</label>
+        <input
+          type="date"
+          {...register('settlement_date', { required: true })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+        />
+        {errors.settlement_date && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+      </div>
+
+      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <ul className="divide-y divide-gray-200">
+          {fields.map((field, index) => (
+            <li key={field.id} className="px-4 py-4 sm:px-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                <div className="sm:col-span-3">
+                  <label className="block text-sm font-medium text-gray-700">업체명</label>
+                  <input
+                    type="text"
+                    {...register(`settlements.${index}.company_name` as const, { required: true })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.company_name && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">센터</label>
+                  <input
+                    type="text"
+                    {...register(`settlements.${index}.center` as const)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">지역</label>
+                  <input
+                    type="text"
+                    {...register(`settlements.${index}.region` as const)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">지원/대처</label>
+                  <input
+                    type="text"
+                    {...register(`settlements.${index}.support_type` as const)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">금액(만원)</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.amount` as const, { 
+                      required: true,
+                      valueAsNumber: true 
+                    })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.amount && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">딜리건수</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.delivery_count` as const, { valueAsNumber: true })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">단가</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.unit_price` as const, { valueAsNumber: true })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">정산금액</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.settlement_amount` as const, { 
+                      required: true,
+                      valueAsNumber: true 
+                    })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.settlement_amount && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">공급가</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.supply_price` as const, { 
+                      required: true,
+                      valueAsNumber: true 
+                    })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.supply_price && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-5">
+                  <label className="block text-sm font-medium text-gray-700">비고</label>
+                  <input
+                    type="text"
+                    {...register(`settlements.${index}.note` as const)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-1 flex items-end justify-end">
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="flex justify-between">
+        <button
+          type="button"
+          onClick={() => append({
+            company_name: '',
+            settlement_date: format(new Date(), 'yyyy-MM-dd'),
+            amount: 0,
+            settlement_amount: 0,
+            supply_price: 0
+          })}
+          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          항목 추가
+        </button>
+
+        <div className="flex space-x-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            취소
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            {isSubmitting ? '처리 중...' : '저장'}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function CoupangBatchForm({ onSubmit, onCancel }: BatchFormProps) {
+  const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<BatchCoupangSettlementDTO>({
+    defaultValues: {
+      settlement_date: format(new Date(), 'yyyy-MM-dd'),
+      settlements: [
+        {
+          settlement_date: format(new Date(), 'yyyy-MM-dd'),
+          courier_name: '',
+          delivery_count: 0,
+          unit_price: 0,
+          supply_price: 0,
+          vat: 0,
+          total_amount: 0,
+          profit: 0
+        }
+      ]
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'settlements'
+  });
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700">정산일자</label>
+        <input
+          type="date"
+          {...register('settlement_date', { required: true })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+        />
+        {errors.settlement_date && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+      </div>
+
+      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <ul className="divide-y divide-gray-200">
+          {fields.map((field, index) => (
+            <li key={field.id} className="px-4 py-4 sm:px-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">이름</label>
+                  <input
+                    type="text"
+                    {...register(`settlements.${index}.courier_name` as const, { required: true })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.courier_name && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">주/야</label>
+                  <select
+                    {...register(`settlements.${index}.day_or_night` as const)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  >
+                    <option value="">선택</option>
+                    <option value="day">주간</option>
+                    <option value="night">야간</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">배송구역</label>
+                  <input
+                    type="text"
+                    {...register(`settlements.${index}.delivery_area` as const)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">건수</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.delivery_count` as const, { 
+                      required: true,
+                      valueAsNumber: true 
+                    })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.delivery_count && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">단가(VAT별도)</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.unit_price` as const, { 
+                      required: true,
+                      valueAsNumber: true 
+                    })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.unit_price && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">공급가</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.supply_price` as const, { 
+                      required: true,
+                      valueAsNumber: true 
+                    })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.supply_price && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">부가세</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.vat` as const, { 
+                      required: true,
+                      valueAsNumber: true 
+                    })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.vat && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">합계</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.total_amount` as const, { 
+                      required: true,
+                      valueAsNumber: true 
+                    })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.total_amount && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700">수익금</label>
+                  <input
+                    type="number"
+                    {...register(`settlements.${index}.profit` as const, { 
+                      required: true,
+                      valueAsNumber: true 
+                    })}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                  {errors.settlements?.[index]?.profit && <span className="text-red-500 text-xs">필수 입력 항목입니다</span>}
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">거래처(입금처)</label>
+                  <input
+                    type="text"
+                    {...register(`settlements.${index}.transaction_partner` as const)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700">비고</label>
+                  <input
+                    type="text"
+                    {...register(`settlements.${index}.note` as const)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  />
+                </div>
+
+                <div className="sm:col-span-1 flex items-end justify-end">
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="flex justify-between">
+        <button
+          type="button"
+          onClick={() => append({
+            settlement_date: format(new Date(), 'yyyy-MM-dd'),
+            courier_name: '',
+            delivery_count: 0,
+            unit_price: 0,
+            supply_price: 0,
+            vat: 0,
+            total_amount: 0,
+            profit: 0
+          })}
+          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          항목 추가
+        </button>
+
+        <div className="flex space-x-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            취소
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            {isSubmitting ? '처리 중...' : '저장'}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
 
 export default function BatchSettlementPage() {
-  const searchParams = useSearchParams();
-  const type = (searchParams.get('type') || 'coupang') as 'kurly' | 'coupang';
-  
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const router = useRouter();
+  const [settlementType, setSettlementType] = useState<SettlementType>('kurly');
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [error, setError] = useState<string>('');
 
-  const handleBatchSettlement = async (rows: any[]) => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
+  const handleKurlySubmit = async (data: BatchKurlySettlementDTO) => {
     try {
-      // 타입에 따라 다른 처리
-      if (type === 'coupang') {
-        // 날짜별로 그룹화
-        const dateGroups: { [key: string]: any[] } = {};
-        
-        rows.forEach(row => {
-          const date = row.settlement_date;
-          if (!dateGroups[date]) {
-            dateGroups[date] = [];
-          }
-          dateGroups[date].push(row);
-        });
-        
-        // 각 날짜별로 정산 생성
-        for (const [date, dateRows] of Object.entries(dateGroups)) {
-          // 먼저 정산 레코드 생성
-          const settlement = await createSettlement(date, 'coupang');
-          
-          // 각 행에 대해 쿠팡 정산 상세 생성
-          for (const row of dateRows) {
-            await createCoupangSettlement(settlement.id, {
-              settlement_date: date,
-              courier_name: row.courier_name,
-              day_or_night: row.day_or_night,
-              delivery_area: row.delivery_area,
-              delivery_count: row.delivery_count,
-              unit_price: row.unit_price,
-              supply_price: row.supply_price,
-              vat: row.vat,
-              total_amount: row.total_amount,
-              profit: row.profit
-            });
-          }
-        }
-      } else if (type === 'kurly') {
-        // 날짜별로 그룹화
-        const dateGroups: { [key: string]: any[] } = {};
-        
-        rows.forEach(row => {
-          const date = row.settlement_date;
-          if (!dateGroups[date]) {
-            dateGroups[date] = [];
-          }
-          dateGroups[date].push(row);
-        });
-        
-        // 각 날짜별로 정산 생성
-        for (const [date, dateRows] of Object.entries(dateGroups)) {
-          // 먼저 정산 레코드 생성
-          const settlement = await createSettlement(date, 'kurly');
-          
-          // 각 행에 대해 컬리 정산 상세 생성
-          for (const row of dateRows) {
-            await createKurlySettlement(settlement.id, {
-              company_name: row.company_name,
-              settlement_date: date,
-              support_type: row.support_type,
-              amount: row.amount,
-              settlement_amount: row.settlement_amount,
-              supply_price: row.supply_price
-            });
-          }
-        }
-      }
+      setError('');
+      setSuccessMessage('');
       
-      setSuccess(`${rows.length}개의 정산 데이터가 성공적으로 추가되었습니다.`);
-      setLoading(false);
+      await batchCreateKurlySettlements(data);
+      setSuccessMessage(`${data.settlements.length}개의 컬리 정산 항목이 성공적으로 생성되었습니다.`);
       
-      // 3초 후 리다이렉트
+      // 잠시 후 리스트 페이지로 이동
       setTimeout(() => {
-        redirect('/dashboard/settlements');
-      }, 3000);
-    } catch (err) {
-      console.error('일괄 정산 처리 중 오류가 발생했습니다:', err);
-      setError('일괄 정산 처리 중 오류가 발생했습니다.');
-      setLoading(false);
+        router.push('/dashboard/settlements');
+      }, 2000);
+    } catch (error) {
+      console.error('Error creating kurly settlements:', error);
+      setError('컬리 정산 항목 생성 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleCoupangSubmit = async (data: BatchCoupangSettlementDTO) => {
+    try {
+      setError('');
+      setSuccessMessage('');
+      
+      await batchCreateCoupangSettlements(data);
+      setSuccessMessage(`${data.settlements.length}개의 쿠팡 정산 항목이 성공적으로 생성되었습니다.`);
+      
+      // 잠시 후 리스트 페이지로 이동
+      setTimeout(() => {
+        router.push('/dashboard/settlements');
+      }, 2000);
+    } catch (error) {
+      console.error('Error creating coupang settlements:', error);
+      setError('쿠팡 정산 항목 생성 중 오류가 발생했습니다.');
     }
   };
 
   const handleCancel = () => {
-    redirect('/dashboard/settlements');
+    router.push('/dashboard/settlements');
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="mb-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">
-          {type === 'coupang' ? '쿠팡 일괄 정산 추가' : '컬리 일괄 정산 추가'}
-        </h1>
-        <div className="space-x-2">
-          {type === 'coupang' ? (
-            <Link
-              href="/dashboard/settlements/batch?type=kurly"
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              컬리 일괄 정산으로 전환
-            </Link>
-          ) : (
-            <Link
-              href="/dashboard/settlements/batch?type=coupang"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              쿠팡 일괄 정산으로 전환
-            </Link>
-          )}
-          <Link
-            href="/dashboard/settlements"
-            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-          >
-            목록으로 돌아가기
-          </Link>
-        </div>
+    <div className="py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        <h1 className="text-2xl font-semibold text-gray-900">배치 정산 입력</h1>
       </div>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+        <div className="py-4">
+          {successMessage && (
+            <div className="mb-4 bg-green-50 border-l-4 border-green-400 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-green-700">{successMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-          {error}
-        </div>
-      )}
+          {error && (
+            <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-      {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-          {success}
-          <p className="text-sm mt-1">정산 목록 페이지로 이동합니다...</p>
-        </div>
-      )}
-
-      <div className="bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          {type === 'coupang' ? '쿠팡 정산 일괄 입력' : '컬리 정산 일괄 입력'}
-        </h2>
-        
-        <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400">
-          <p className="text-sm">
-            여러 건의 정산 데이터를 한 번에 입력할 수 있습니다. 각 행의 데이터를 모두 채운 후 일괄 저장 버튼을 클릭하세요.
-          </p>
-          <p className="text-sm mt-1">
-            • 필수 입력 항목은 모두 채워야 합니다.
-          </p>
-          <p className="text-sm">
-            • 금액은 자동으로 계산됩니다.
-          </p>
-        </div>
-        
-        {loading ? (
-          <div className="text-center py-10">
-            <p className="text-gray-600">정산 데이터를 저장하는 중입니다...</p>
+          <div className="mb-5 mt-4 border-b border-gray-200">
+            <div className="sm:items-baseline">
+              <div className="mt-4 sm:mt-0">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => setSettlementType('kurly')}
+                    className={`${
+                      settlementType === 'kurly'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    } whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm`}
+                  >
+                    컬리 정산
+                  </button>
+                  <button
+                    onClick={() => setSettlementType('coupang')}
+                    className={`${
+                      settlementType === 'coupang'
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    } whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm`}
+                  >
+                    쿠팡 정산
+                  </button>
+                </nav>
+              </div>
+            </div>
           </div>
-        ) : (
-          <BatchSettlementForm
-            type={type}
-            onSubmit={handleBatchSettlement}
-            onCancel={handleCancel}
-          />
-        )}
+
+          {settlementType === 'kurly' ? (
+            <KurlyBatchForm type="kurly" onSubmit={handleKurlySubmit} onCancel={handleCancel} />
+          ) : (
+            <CoupangBatchForm type="coupang" onSubmit={handleCoupangSubmit} onCancel={handleCancel} />
+          )}
+        </div>
       </div>
     </div>
   );

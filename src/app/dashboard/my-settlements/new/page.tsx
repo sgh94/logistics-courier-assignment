@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { 
@@ -10,18 +10,36 @@ import {
 } from '@/lib/types/settlement';
 import { createSettlement, createKurlySettlement, createCoupangSettlement, createGeneralSettlement } from '@/lib/settlements';
 import { format } from 'date-fns';
-import { useUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
 type SettlementType = 'kurly' | 'coupang' | 'general';
 
 export default function MyCourierSettlementPage() {
   const router = useRouter();
-  const { user } = useUser();
+  const [user, setUser] = useState<any>(null);
   const [settlementType, setSettlementType] = useState<SettlementType>('kurly');
   const [generalColumns, setGeneralColumns] = useState<string[]>(['날짜', '항목', '금액', '비고']);
   const [generalRows, setGeneralRows] = useState<any[]>([{ '날짜': format(new Date(), 'yyyy-MM-dd'), '항목': '', '금액': '', '비고': '' }]);
-  const [successMessage, setSuccessMessage] = useState<string>('');
-  const [error, setError] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 현재 사용자 정보 로드
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const { user: currentUser } = await getCurrentUser();
+        setUser(currentUser);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error loading user:', err);
+        setError('사용자 정보를 불러오는데 실패했습니다.');
+        setIsLoading(false);
+      }
+    }
+    
+    loadUser();
+  }, []);
 
   // Form for Kurly settlement
   const { 
@@ -46,7 +64,7 @@ export default function MyCourierSettlementPage() {
   } = useForm<CreateCoupangSettlementDTO>({
     defaultValues: {
       settlement_date: format(new Date(), 'yyyy-MM-dd'),
-      courier_name: user?.name || '',
+      courier_name: '',
       delivery_count: 0,
       unit_price: 0,
       supply_price: 0,
@@ -55,6 +73,13 @@ export default function MyCourierSettlementPage() {
       profit: 0
     }
   });
+
+  useEffect(() => {
+    // 사용자 정보가 로드되면 폼의 기본값 업데이트
+    if (user) {
+      registerCoupang('courier_name', { value: user.name });
+    }
+  }, [user, registerCoupang]);
 
   const handleKurlySubmit = async (data: CreateKurlySettlementDTO) => {
     try {
@@ -75,8 +100,8 @@ export default function MyCourierSettlementPage() {
       setTimeout(() => {
         router.push('/dashboard/my-settlements');
       }, 2000);
-    } catch (error) {
-      console.error('Error creating kurly settlement:', error);
+    } catch (err) {
+      console.error('Error creating kurly settlement:', err);
       setError('컬리 정산 항목 생성 중 오류가 발생했습니다.');
     }
   };
@@ -100,8 +125,8 @@ export default function MyCourierSettlementPage() {
       setTimeout(() => {
         router.push('/dashboard/my-settlements');
       }, 2000);
-    } catch (error) {
-      console.error('Error creating coupang settlement:', error);
+    } catch (err) {
+      console.error('Error creating coupang settlement:', err);
       setError('쿠팡 정산 항목 생성 중 오류가 발생했습니다.');
     }
   };
@@ -133,8 +158,8 @@ export default function MyCourierSettlementPage() {
       setTimeout(() => {
         router.push('/dashboard/my-settlements');
       }, 2000);
-    } catch (error) {
-      console.error('Error creating general settlement:', error);
+    } catch (err) {
+      console.error('Error creating general settlement:', err);
       setError('정산 항목 생성 중 오류가 발생했습니다.');
     }
   };
@@ -158,6 +183,27 @@ export default function MyCourierSettlementPage() {
   const handleCancel = () => {
     router.push('/dashboard/my-settlements');
   };
+
+  if (isLoading) {
+    return (
+      <div className="py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-semibold text-gray-900">정산 항목 생성</h1>
+          </div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="py-4">
+            <div className="text-center py-10">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+              <p className="mt-2 text-gray-500">사용자 정보를 불러오는 중...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-6">

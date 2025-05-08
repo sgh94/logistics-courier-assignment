@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { createSettlement, createKurlySettlement, createCoupangSettlement, createGeneralSettlement } from '@/lib/settlements';
@@ -6,17 +8,14 @@ import CoupangSettlementForm from '@/components/settlements/CoupangSettlementFor
 import GeneralSettlementForm from '@/components/settlements/GeneralSettlementForm';
 import Link from 'next/link';
 import { CreateKurlySettlementDTO, CreateCoupangSettlementDTO, CreateGeneralSettlementDTO } from '@/lib/types/settlement';
+import { useSearchParams } from 'next/navigation';
 
-export default function NewSettlementPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const type = searchParams.type as string || 'kurly';
+export default function NewSettlementPage() {
+  const searchParams = useSearchParams();
+  const type = searchParams.get('type') || 'kurly';
   
-  // Server actions for form submissions
+  // 비동기 핸들러 함수들 - 클라이언트 컴포넌트에서는 'use server'를 사용하지 않습니다
   const handleCreateKurlySettlement = async (data: CreateKurlySettlementDTO) => {
-    'use server';
     try {
       // First create the settlement record
       const settlement = await createSettlement(data.settlement_date, 'kurly');
@@ -33,7 +32,6 @@ export default function NewSettlementPage({
   };
   
   const handleCreateCoupangSettlement = async (data: CreateCoupangSettlementDTO) => {
-    'use server';
     try {
       // First create the settlement record
       const settlement = await createSettlement(data.settlement_date, 'coupang');
@@ -50,7 +48,6 @@ export default function NewSettlementPage({
   };
   
   const handleCreateGeneralSettlement = async (data: CreateGeneralSettlementDTO) => {
-    'use server';
     try {
       // First create the settlement record
       const today = new Date().toISOString().split('T')[0];
@@ -81,6 +78,10 @@ export default function NewSettlementPage({
     }
   };
 
+  const handleCancel = () => {
+    redirect('/dashboard/settlements');
+  };
+
   return (
     <div className="container mx-auto p-4">
       <div className="mb-6 flex justify-between items-center">
@@ -99,21 +100,21 @@ export default function NewSettlementPage({
         {type === 'kurly' && (
           <KurlySettlementForm 
             onSubmit={handleCreateKurlySettlement} 
-            onCancel={() => redirect('/dashboard/settlements')} 
+            onCancel={handleCancel} 
           />
         )}
         
         {type === 'coupang' && (
           <CoupangSettlementForm 
             onSubmit={handleCreateCoupangSettlement} 
-            onCancel={() => redirect('/dashboard/settlements')} 
+            onCancel={handleCancel} 
           />
         )}
         
         {type === 'general' && (
           <GeneralSettlementForm 
             onSubmit={handleCreateGeneralSettlement} 
-            onCancel={() => redirect('/dashboard/settlements')} 
+            onCancel={handleCancel} 
           />
         )}
       </div>

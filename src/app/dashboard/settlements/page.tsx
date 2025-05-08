@@ -1,29 +1,54 @@
-import React from 'react';
+"use client";
+
+import React, { useEffect, useState } from 'react';
 import { getSettlements, deleteSettlement } from '@/lib/settlements';
 import SettlementList from '@/components/settlements/SettlementList';
 import Link from 'next/link';
 import { Settlement } from '@/lib/types/settlement';
 
-export const dynamic = 'force-dynamic';
+export default function SettlementsPage() {
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export default async function SettlementsPage() {
-  let settlements: Settlement[] = [];
-  let error = null;
-
-  try {
-    settlements = await getSettlements();
-  } catch (err) {
-    error = err instanceof Error ? err.message : '정산 데이터를 불러오는 중 오류가 발생했습니다.';
-  }
+  useEffect(() => {
+    async function loadSettlements() {
+      try {
+        setLoading(true);
+        const data = await getSettlements();
+        setSettlements(data);
+        setLoading(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '정산 데이터를 불러오는 중 오류가 발생했습니다.');
+        setLoading(false);
+      }
+    }
+    
+    loadSettlements();
+  }, []);
 
   const handleDeleteSettlement = async (id: string) => {
-    'use server';
-    try {
-      await deleteSettlement(id);
-    } catch (error) {
-      console.error('Failed to delete settlement:', error);
+    if (window.confirm('정말 이 정산 데이터를 삭제하시겠습니까?')) {
+      try {
+        await deleteSettlement(id);
+        // 삭제 후 목록 업데이트
+        setSettlements(settlements.filter(item => item.id !== id));
+      } catch (error) {
+        console.error('Failed to delete settlement:', error);
+        alert('정산 데이터 삭제 중 오류가 발생했습니다.');
+      }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="text-center py-10">
+          <p className="text-gray-600">정산 데이터를 불러오는 중입니다...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4">

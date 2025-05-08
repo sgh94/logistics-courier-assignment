@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getCourierById } from '@/lib/couriers';
+import { getCourier } from '@/lib/couriers';
 import { getSettlements, getKurlySettlements, getCoupangSettlements } from '@/lib/settlements';
 import { Settlement, KurlySettlement, CoupangSettlement } from '@/lib/types/settlement';
 import Link from 'next/link';
@@ -32,7 +32,7 @@ export default function SettlementReportPage() {
         
         // 기사 정보 가져오기
         if (courierId) {
-          const courierData = await getCourierById(courierId);
+          const courierData = await getCourier(courierId);
           setCourier(courierData);
         }
         

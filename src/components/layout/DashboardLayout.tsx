@@ -15,8 +15,10 @@ import {
   FiCalendar, 
   FiLogOut,
   FiPieChart,
-  FiSettings
+  FiSettings,
+  FiDollarSign
 } from 'react-icons/fi';
+import Sidebar from './Sidebar';
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
@@ -105,6 +107,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ? [
           { name: '통계', href: '/dashboard/statistics', icon: FiPieChart },
           { name: '설정', href: '/dashboard/settings', icon: FiSettings },
+          { name: '정산 관리', href: '/dashboard/settlements', icon: FiDollarSign },
         ]
       : []),
   ];
@@ -147,14 +150,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 key={item.name}
                 onClick={() => handleNavItemClick(item.href)}
                 className={`group flex items-center px-2 py-3 text-base font-medium rounded-md cursor-pointer min-h-[48px] ${
-                  pathname === item.href
+                  pathname?.startsWith(item.href)
                     ? 'bg-primary-100 text-primary-700'
                     : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
                 }`}
               >
                 <item.icon
                   className={`mr-4 flex-shrink-0 h-6 w-6 ${
-                    pathname === item.href ? 'text-primary-700' : 'text-secondary-400 group-hover:text-secondary-500'
+                    pathname?.startsWith(item.href) ? 'text-primary-700' : 'text-secondary-400 group-hover:text-secondary-500'
                   }`}
                   aria-hidden="true"
                 />
@@ -181,50 +184,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Static sidebar for desktop */}
       <div className="hidden lg:flex lg:flex-shrink-0">
-        <div className="flex flex-col w-64">
-          <div className="flex-1 flex flex-col min-h-0 border-r border-secondary-200 bg-white">
-            <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
-              <div className="flex items-center flex-shrink-0 px-4">
-                <h1 className="text-xl font-bold text-primary-700">물류센터 배치 관리</h1>
-              </div>
-              <nav className="mt-5 flex-1 px-2 space-y-1">
-                {navigationItems.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md min-h-[40px] ${
-                      pathname === item.href
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
-                    }`}
-                  >
-                    <item.icon
-                      className={`mr-3 flex-shrink-0 h-6 w-6 ${
-                        pathname === item.href ? 'text-primary-700' : 'text-secondary-400 group-hover:text-secondary-500'
-                      }`}
-                      aria-hidden="true"
-                    />
-                    {item.name}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-            <div className="flex-shrink-0 flex border-t border-secondary-200 p-4">
-              <div className="flex items-center w-full">
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-secondary-700">{user.name}</div>
-                  <div className="text-xs font-medium text-secondary-500">{user.email}</div>
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="p-2 rounded-full text-secondary-400 hover:text-secondary-500 min-h-[40px] min-w-[40px] flex items-center justify-center"
-                >
-                  <FiLogOut className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Sidebar />
       </div>
 
       {/* Main content area */}
@@ -241,7 +201,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex-1 px-4 flex justify-between">
             <div className="flex-1 flex items-center">
               <h1 className="text-xl font-semibold text-secondary-900">
-                {navigationItems.find((item) => item.href === pathname)?.name || '대시보드'}
+                {navigationItems.find((item) => pathname?.startsWith(item.href))?.name || '대시보드'}
               </h1>
             </div>
           </div>

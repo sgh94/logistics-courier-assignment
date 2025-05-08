@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, User } from '@/lib/auth';
 import { getCourierAssignments, getAllAssignments } from '@/lib/assignments';
-import { User } from '@/lib/supabase';
 import Link from 'next/link';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";

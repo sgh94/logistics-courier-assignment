@@ -1,4 +1,10 @@
-import { supabase, User } from './supabase';
+import { supabase } from './supabase';
+import { User } from './auth';
+
+// 모든 택배기사 가져오기 (getAllCouriers는 이전 이름, getCouriers는 새 이름)
+export async function getCouriers() {
+  return getAllCouriers();
+}
 
 // 모든 택배기사 가져오기
 export async function getAllCouriers() {
@@ -14,6 +20,11 @@ export async function getAllCouriers() {
   }
 
   return data as User[];
+}
+
+// 특정 택배기사 정보 가져오기 (getCourier는 이전 이름, getCourierById는 새 이름)
+export async function getCourierById(id: string) {
+  return getCourier(id);
 }
 
 // 특정 택배기사 정보 가져오기

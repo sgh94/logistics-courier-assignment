@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { GeneralSettlementRow, CreateGeneralSettlementDTO } from '@/lib/types/settlement';
 import EditableTable from './EditableTable';

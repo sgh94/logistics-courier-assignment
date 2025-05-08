@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, User } from '@/lib/auth';
 import { getLogisticsCenters } from '@/lib/centers';
 import { getAllCouriersWithVoteStatus, getAssignedCouriers } from '@/lib/couriers';
 import { createMultipleAssignments } from '@/lib/assignments';
 import { sendAssignmentNotification } from '@/lib/notifications';
-import { LogisticsCenter, User } from '@/lib/supabase';
+import { LogisticsCenter } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DatePicker from "react-datepicker";

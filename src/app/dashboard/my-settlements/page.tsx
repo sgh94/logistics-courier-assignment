@@ -9,12 +9,12 @@ import {
   deleteSettlement 
 } from '@/lib/settlements';
 import { Settlement, SettlementWithDetails } from '@/lib/types/settlement';
-import { useUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 import { format } from 'date-fns';
 
 export default function MySettlementsPage() {
   const router = useRouter();
-  const { user } = useUser();
+  const [user, setUser] = useState<any>(null);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,12 +23,21 @@ export default function MySettlementsPage() {
 
   // 데이터 로드
   useEffect(() => {
-    if (!user) return;
-    
-    async function loadSettlements() {
+    async function loadData() {
       try {
         setIsLoading(true);
-        const data = await getSettlements(user.id);
+        
+        // 현재 사용자 정보 가져오기
+        const { user: currentUser } = await getCurrentUser();
+        setUser(currentUser);
+        
+        if (!currentUser) {
+          setError('로그인이 필요합니다.');
+          setIsLoading(false);
+          return;
+        }
+        
+        const data = await getSettlements(currentUser.id);
         setSettlements(data);
       } catch (err) {
         console.error('Error loading settlements:', err);
@@ -38,8 +47,8 @@ export default function MySettlementsPage() {
       }
     }
 
-    loadSettlements();
-  }, [user]);
+    loadData();
+  }, []);
 
   // 세부 정보 토글
   const toggleDetails = async (settlementId: string) => {

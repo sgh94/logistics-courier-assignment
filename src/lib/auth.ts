@@ -1,4 +1,57 @@
 import { supabase } from './supabase';
+import { useState, useEffect } from 'react';
+
+// 사용자 타입 정의
+export interface User {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  role: 'admin' | 'courier';
+  created_at?: string;
+}
+
+// useUser 훅 추가
+export function useUser() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        setLoading(true);
+        const { user } = await getCurrentUser();
+        setUser(user);
+      } catch (err: any) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadUser();
+
+    // 인증 상태 변경 리스너 등록
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+          const { user } = await getCurrentUser();
+          setUser(user);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+
+    // 컴포넌트 언마운트 시 리스너 제거
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  return { user, loading, error };
+}
 
 // 핸드폰 번호로 인증 코드 요청
 export const requestPhoneVerification = async (phone: string) => {

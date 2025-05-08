@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from 'react';
 import { GeneralSettlementRow } from '@/lib/types/settlement';
 

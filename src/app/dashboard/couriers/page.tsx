@@ -1,12 +1,18 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { getCurrentUser, User } from '@/lib/auth';
-import { getAllCouriers } from '@/lib/couriers';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import toast from 'react-hot-toast';
-import { FiMail, FiPhone, FiCalendar, FiPieChart, FiSettings } from 'react-icons/fi';
+import { useState, useEffect } from "react";
+import { getCurrentUser, User } from "@/lib/auth";
+import { getAllCouriers } from "@/lib/couriers";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import toast from "react-hot-toast";
+import {
+  FiMail,
+  FiPhone,
+  FiCalendar,
+  FiPieChart,
+  FiSettings,
+} from "react-icons/fi";
 
 export default function CouriersPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -19,26 +25,26 @@ export default function CouriersPage() {
       try {
         // 사용자 권한 확인
         const { user } = await getCurrentUser();
-        
-        if (!user || user.role !== 'admin') {
+
+        if (!user || user.role !== "admin") {
           setIsAdmin(false);
-          router.push('/dashboard');
+          router.push("/dashboard");
           return;
         }
-        
+
         setIsAdmin(true);
-        
+
         // 기사 목록 가져오기
         const couriersData = await getAllCouriers();
         setCouriers(couriersData);
       } catch (error) {
-        console.error('Error loading couriers:', error);
-        toast.error('기사 정보를 불러오는데 실패했습니다.');
+        console.error("Error loading couriers:", error);
+        toast.error("기사 정보를 불러오는데 실패했습니다.");
       } finally {
         setIsLoading(false);
       }
     }
-    
+
     loadData();
   }, [router]);
 
@@ -57,14 +63,18 @@ export default function CouriersPage() {
   return (
     <div className="py-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-secondary-800">택배기사 관리</h2>
+        <h2 className="text-2xl font-semibold text-secondary-800">
+          택배기사 관리
+        </h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {couriers.map((courier) => (
           <div key={courier.id} className="card overflow-hidden">
             <div className="card-header flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-secondary-800">{courier.name}</h3>
+              <h3 className="text-lg font-semibold text-secondary-800">
+                {courier.name}
+              </h3>
               <div className="flex space-x-2">
                 <Link
                   href={`/dashboard/couriers/stats/${courier.id}`}
@@ -96,7 +106,12 @@ export default function CouriersPage() {
                 )}
                 <div className="flex items-center text-sm text-secondary-600">
                   <FiCalendar className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span>가입일: {new Date(courier.created_at).toLocaleDateString()}</span>
+                  <span>
+                    가입일:{" "}
+                    {courier.created_at
+                      ? new Date(courier.created_at).toLocaleDateString()
+                      : "N/A"}
+                  </span>
                 </div>
               </div>
 
@@ -122,7 +137,9 @@ export default function CouriersPage() {
       {couriers.length === 0 && (
         <div className="text-center py-12">
           <p className="text-secondary-600 mb-4">등록된 택배기사가 없습니다.</p>
-          <p className="text-secondary-500">택배기사가 회원가입하면 이곳에 표시됩니다.</p>
+          <p className="text-secondary-500">
+            택배기사가 회원가입하면 이곳에 표시됩니다.
+          </p>
         </div>
       )}
     </div>

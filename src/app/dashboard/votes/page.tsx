@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, User } from '@/lib/auth';
 import { getUserVotes, saveVote, getAllVotes } from '@/lib/votes';
 import { getLogisticsCenters } from '@/lib/centers';
-import { User, LogisticsCenter } from '@/lib/supabase';
+import { LogisticsCenter } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import DatePicker from "react-datepicker";

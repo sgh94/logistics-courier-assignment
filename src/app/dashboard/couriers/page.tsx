@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, User } from '@/lib/auth';
 import { getAllCouriers } from '@/lib/couriers';
-import { User } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';

@@ -7,15 +7,25 @@ import {
   GeneralSettlementRow,
   CreateKurlySettlementDTO,
   CreateCoupangSettlementDTO,
-  CreateGeneralSettlementDTO
+  CreateGeneralSettlementDTO,
+  BatchKurlySettlementDTO,
+  BatchCoupangSettlementDTO,
+  BatchGeneralSettlementDTO,
+  SettlementWithDetails
 } from './types/settlement';
 
 // Common settlement functions
-export async function getSettlements() {
-  const { data, error } = await supabase
+export async function getSettlements(courier_id?: string) {
+  let query = supabase
     .from('settlements')
     .select('*')
     .order('settlement_date', { ascending: false });
+    
+  if (courier_id) {
+    query = query.eq('courier_id', courier_id);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data as Settlement[];
@@ -32,15 +42,35 @@ export async function getSettlementById(id: string) {
   return data as Settlement;
 }
 
+export async function getSettlementsByDateRange(startDate: string, endDate: string, courier_id?: string) {
+  let query = supabase
+    .from('settlements')
+    .select('*')
+    .gte('settlement_date', startDate)
+    .lte('settlement_date', endDate)
+    .order('settlement_date', { ascending: true });
+    
+  if (courier_id) {
+    query = query.eq('courier_id', courier_id);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+  return data as Settlement[];
+}
+
 export async function createSettlement(
   settlement_date: string, 
-  settlement_type: 'kurly' | 'coupang' | 'general'
+  settlement_type: 'kurly' | 'coupang' | 'general',
+  courier_id?: string
 ) {
   const { data, error } = await supabase
     .from('settlements')
     .insert({
       settlement_date,
-      settlement_type
+      settlement_type,
+      courier_id
     })
     .select()
     .single();
@@ -77,6 +107,31 @@ export async function deleteSettlement(id: string) {
   return true;
 }
 
+// Get full settlement details based on type
+export async function getSettlementWithDetails(id: string): Promise<SettlementWithDetails> {
+  const settlement = await getSettlementById(id);
+  
+  let details;
+  
+  switch (settlement.settlement_type) {
+    case 'kurly':
+      details = await getKurlySettlements(id);
+      break;
+    case 'coupang':
+      details = await getCoupangSettlements(id);
+      break;
+    case 'general':
+      const generalData = await getGeneralSettlementColumns(id);
+      details = generalData;
+      break;
+  }
+  
+  return {
+    settlement,
+    details
+  };
+}
+
 // Kurly settlements
 export async function getKurlySettlements(settlement_id: string) {
   const { data, error } = await supabase
@@ -104,6 +159,34 @@ export async function createKurlySettlement(
 
   if (error) throw error;
   return data as KurlySettlement;
+}
+
+export async function batchCreateKurlySettlements(
+  batchKurlyData: BatchKurlySettlementDTO
+) {
+  // First create the settlement parent record
+  const settlement = await createSettlement(
+    batchKurlyData.settlement_date,
+    'kurly'
+  );
+  
+  // Then create all the individual settlements
+  const insertData = batchKurlyData.settlements.map(item => ({
+    settlement_id: settlement.id,
+    ...item
+  }));
+  
+  const { data, error } = await supabase
+    .from('kurly_settlements')
+    .insert(insertData)
+    .select();
+
+  if (error) throw error;
+  
+  return {
+    settlement,
+    items: data as KurlySettlement[]
+  };
 }
 
 export async function updateKurlySettlement(
@@ -161,6 +244,34 @@ export async function createCoupangSettlement(
 
   if (error) throw error;
   return data as CoupangSettlement;
+}
+
+export async function batchCreateCoupangSettlements(
+  batchCoupangData: BatchCoupangSettlementDTO
+) {
+  // First create the settlement parent record
+  const settlement = await createSettlement(
+    batchCoupangData.settlement_date,
+    'coupang'
+  );
+  
+  // Then create all the individual settlements
+  const insertData = batchCoupangData.settlements.map(item => ({
+    settlement_id: settlement.id,
+    ...item
+  }));
+  
+  const { data, error } = await supabase
+    .from('coupang_settlements')
+    .insert(insertData)
+    .select();
+
+  if (error) throw error;
+  
+  return {
+    settlement,
+    items: data as CoupangSettlement[]
+  };
 }
 
 export async function updateCoupangSettlement(
@@ -266,6 +377,30 @@ export async function createGeneralSettlement(
   return {
     columns,
     rows
+  };
+}
+
+export async function batchCreateGeneralSettlement(
+  batchGeneralData: BatchGeneralSettlementDTO
+) {
+  // First create the settlement parent record
+  const settlement = await createSettlement(
+    batchGeneralData.settlement_date,
+    'general'
+  );
+  
+  // Then create the general settlement data
+  await createGeneralSettlement(settlement.id, {
+    columns: batchGeneralData.columns,
+    rows: batchGeneralData.rows
+  });
+  
+  return {
+    settlement,
+    details: {
+      columns: batchGeneralData.columns,
+      rows: batchGeneralData.rows
+    }
   };
 }
 

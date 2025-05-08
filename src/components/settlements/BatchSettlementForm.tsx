@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { CreateCoupangSettlementDTO } from '@/lib/types/settlement';
-import { User } from '@/lib/supabase';
+import { User } from '@/lib/auth';
 import { getCouriers } from '@/lib/couriers';
 
 interface BatchSettlementFormProps {

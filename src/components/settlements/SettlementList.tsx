@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { Settlement } from '@/lib/types/settlement';
 import Link from 'next/link';

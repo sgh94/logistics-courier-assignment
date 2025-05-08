@@ -1,4 +1,4 @@
-import { createClient } from './supabase';
+import { supabase } from './supabase';
 import { 
   Settlement, 
   KurlySettlement, 
@@ -12,7 +12,6 @@ import {
 
 // Common settlement functions
 export async function getSettlements() {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('settlements')
     .select('*')
@@ -23,7 +22,6 @@ export async function getSettlements() {
 }
 
 export async function getSettlementById(id: string) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('settlements')
     .select('*')
@@ -38,7 +36,6 @@ export async function createSettlement(
   settlement_date: string, 
   settlement_type: 'kurly' | 'coupang' | 'general'
 ) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('settlements')
     .insert({
@@ -56,7 +53,6 @@ export async function updateSettlement(
   id: string,
   settlement_date: string
 ) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('settlements')
     .update({
@@ -72,7 +68,6 @@ export async function updateSettlement(
 }
 
 export async function deleteSettlement(id: string) {
-  const supabase = createClient();
   const { error } = await supabase
     .from('settlements')
     .delete()
@@ -84,7 +79,6 @@ export async function deleteSettlement(id: string) {
 
 // Kurly settlements
 export async function getKurlySettlements(settlement_id: string) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('kurly_settlements')
     .select('*')
@@ -99,7 +93,6 @@ export async function createKurlySettlement(
   settlement_id: string,
   kurlySettlement: CreateKurlySettlementDTO
 ) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('kurly_settlements')
     .insert({
@@ -117,7 +110,6 @@ export async function updateKurlySettlement(
   id: string,
   kurlySettlement: Partial<CreateKurlySettlementDTO>
 ) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('kurly_settlements')
     .update({
@@ -133,7 +125,6 @@ export async function updateKurlySettlement(
 }
 
 export async function deleteKurlySettlement(id: string) {
-  const supabase = createClient();
   const { error } = await supabase
     .from('kurly_settlements')
     .delete()
@@ -145,7 +136,6 @@ export async function deleteKurlySettlement(id: string) {
 
 // Coupang settlements
 export async function getCoupangSettlements(settlement_id: string) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('coupang_settlements')
     .select('*')
@@ -160,7 +150,6 @@ export async function createCoupangSettlement(
   settlement_id: string,
   coupangSettlement: CreateCoupangSettlementDTO
 ) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('coupang_settlements')
     .insert({
@@ -178,7 +167,6 @@ export async function updateCoupangSettlement(
   id: string,
   coupangSettlement: Partial<CreateCoupangSettlementDTO>
 ) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('coupang_settlements')
     .update({
@@ -194,7 +182,6 @@ export async function updateCoupangSettlement(
 }
 
 export async function deleteCoupangSettlement(id: string) {
-  const supabase = createClient();
   const { error } = await supabase
     .from('coupang_settlements')
     .delete()
@@ -206,7 +193,6 @@ export async function deleteCoupangSettlement(id: string) {
 
 // General settlements (fully editable version)
 export async function getGeneralSettlementColumns(settlement_id: string) {
-  const supabase = createClient();
   const { data, error } = await supabase
     .from('general_settlements')
     .select('*')
@@ -253,7 +239,6 @@ export async function createGeneralSettlement(
   settlement_id: string,
   generalSettlement: CreateGeneralSettlementDTO
 ) {
-  const supabase = createClient();
   const { columns, rows } = generalSettlement;
   
   // Convert to database format
@@ -289,7 +274,6 @@ export async function updateGeneralSettlement(
   generalSettlement: CreateGeneralSettlementDTO
 ) {
   // For simplicity, we'll delete all existing entries and recreate them
-  const supabase = createClient();
   
   // First delete existing entries
   const { error: deleteError } = await supabase
@@ -304,7 +288,6 @@ export async function updateGeneralSettlement(
 }
 
 export async function deleteGeneralSettlement(settlement_id: string) {
-  const supabase = createClient();
   const { error } = await supabase
     .from('general_settlements')
     .delete()

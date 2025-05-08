@@ -1,20 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
+import { User } from './auth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// 기본 테이블 타입 정의
-export type User = {
-  id: string;
-  phone: string;
-  email?: string;
-  role: 'admin' | 'courier';
-  name: string;
-  created_at: string;
-};
-
+// 기본 테이블 타입 정의 (User 타입은 auth.ts에서 가져옵니다)
 export type LogisticsCenter = {
   id: string;
   name: string;

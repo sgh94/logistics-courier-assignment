@@ -5,6 +5,7 @@ export interface Settlement {
   created_at: string;
   updated_at: string;
   created_by: string;
+  courier_id?: string; // 배송기사가 직접 등록한 경우
 }
 
 export interface KurlySettlement {
@@ -102,4 +103,26 @@ export interface CreateCoupangSettlementDTO {
 export interface CreateGeneralSettlementDTO {
   columns: string[];
   rows: GeneralSettlementRow[];
+}
+
+// New batch import interfaces for multiple entries at once
+export interface BatchKurlySettlementDTO {
+  settlement_date: string;
+  settlements: CreateKurlySettlementDTO[];
+}
+
+export interface BatchCoupangSettlementDTO {
+  settlement_date: string;
+  settlements: CreateCoupangSettlementDTO[];
+}
+
+export interface BatchGeneralSettlementDTO {
+  settlement_date: string;
+  columns: string[];
+  rows: GeneralSettlementRow[];
+}
+
+export interface SettlementWithDetails {
+  settlement: Settlement;
+  details: KurlySettlement[] | CoupangSettlement[] | { columns: string[], rows: GeneralSettlementRow[] };
 }

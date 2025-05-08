@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { getCurrentUser, signOut } from '@/lib/auth';
-import { User } from '@/lib/supabase';
+import { getCurrentUser, signOut, User } from '@/lib/auth';
 import toast from 'react-hot-toast';
 import { 
   FiMenu, 

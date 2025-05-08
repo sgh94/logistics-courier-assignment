@@ -44,7 +44,7 @@ export default function Sidebar() {
           href="/dashboard"
           icon={<span className="text-xl">📊</span>}
           label="홈"
-          active={isActive('/dashboard')}
+          active={isActive('/dashboard') && pathname === '/dashboard'}
         />
         <SidebarLink
           href="/dashboard/assignments"
@@ -77,32 +77,32 @@ export default function Sidebar() {
           active={isActive('/dashboard/statistics')}
         />
         
-        {/* New settlement section */}
+        {/* 정산 관리 섹션 */}
         <div className="pt-4 mt-4 border-t border-gray-200">
           <h3 className="text-lg font-semibold mb-2">정산 관리</h3>
           <SidebarLink
             href="/dashboard/settlements"
             icon={<span className="text-xl">💰</span>}
             label="전체 정산"
-            active={isActive('/dashboard/settlements')}
+            active={isActive('/dashboard/settlements') && !pathname.includes('/new')}
           />
           <SidebarLink
             href="/dashboard/settlements/new?type=kurly"
             icon={<span className="text-xl">🛒</span>}
             label="컬리 정산 추가"
-            active={pathname === '/dashboard/settlements/new' && pathname.includes('type=kurly')}
+            active={pathname?.includes('/dashboard/settlements/new') && pathname?.includes('type=kurly')}
           />
           <SidebarLink
             href="/dashboard/settlements/new?type=coupang"
             icon={<span className="text-xl">📦</span>}
             label="쿠팡 정산 추가"
-            active={pathname === '/dashboard/settlements/new' && pathname.includes('type=coupang')}
+            active={pathname?.includes('/dashboard/settlements/new') && pathname?.includes('type=coupang')}
           />
           <SidebarLink
             href="/dashboard/settlements/new?type=general"
             icon={<span className="text-xl">📑</span>}
             label="편집용 정산 추가"
-            active={pathname === '/dashboard/settlements/new' && pathname.includes('type=general')}
+            active={pathname?.includes('/dashboard/settlements/new') && pathname?.includes('type=general')}
           />
         </div>
       </nav>
